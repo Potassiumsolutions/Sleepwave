@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SleepWave</title>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Apple PWA tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="SleepWave">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- Theme color for Android Chrome -->
+<meta name="theme-color" content="#080b14">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b14;
+  --surface:#0f1422;
+  --surface2:#161c30;
+  --surface3:#1d2540;
+  --accent:#6c8eff;
+  --accent2:#a78bfa;
+  --success:#4ade80;
+  --warn:#fb923c;
+  --danger:#f87171;
+  --text:#e8eaf6;
+  --text2:#8b90b8;
+  --text3:#4a5080;
+  --border:#232a48;
+  --border2:#2e3660;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative}
+
+/* starfield bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 20%,rgba(108,142,255,.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 80%,rgba(167,139,250,.06) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* HEADER */
+.header{
+  position:relative;z-index:10;
+  padding:16px 20px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,11,20,.9);backdrop-filter:blur(12px);
+}
+.logo{font-family:'DM Serif Display',serif;font-size:1.5rem;letter-spacing:.02em;
+  background:linear-gradient(135deg,#a5b8ff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.alarm-pill{
+  font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px;
+  background:rgba(74,222,128,.12);color:var(--success);border:1px solid rgba(74,222,128,.3);
+  display:none;animation:pulse 2s ease infinite;
+}
+.alarm-pill.show{display:block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* NAV */
+.nav{
+  position:relative;z-index:10;
+  display:flex;border-bottom:1px solid var(--border);
+  background:rgba(8,11,20,.9);backdrop-filter:blur(12px);
+}
+.nav-btn{
+  flex:1;padding:12px 0;border:none;background:none;color:var(--text3);
+  font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* MAIN SCROLL */
+.main{flex:1;overflow-y:auto;position:relative;z-index:1;padding-bottom:20px}
+.tab{display:none;padding:16px 16px 0}
+.tab.active{display:block}
+
+/* CARDS */
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px;margin-bottom:12px;
+}
+.card-title{
+  font-family:'DM Serif Display',serif;font-size:.95rem;
+  color:var(--text2);margin-bottom:12px;letter-spacing:.03em;
+}
+
+/* SECTION LABEL */
+.label{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+
+/* SLIDERS */
+.slider-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.slider-row label{font-size:.8rem;color:var(--text2);min-width:64px}
+.slider-row input[type=range]{
+  flex:1;-webkit-appearance:none;height:4px;
+  background:var(--surface3);border-radius:2px;outline:none;cursor:pointer;
+}
+.slider-row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--bg);cursor:pointer;
+}
+.slider-row .val{font-size:.78rem;color:var(--accent);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* TOGGLE BUTTONS */
+.btn-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tog{
+  padding:6px 14px;border-radius:20px;border:1px solid var(--border2);
+  background:none;color:var(--text2);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;
+}
+.tog.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* MAIN BUTTONS */
+.btn{
+  width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;
+  letter-spacing:.05em;transition:all .2s;
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
+.btn-danger{background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.3)}
+.btn-sm{width:auto;padding:7px 16px;font-size:.78rem}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+
+/* TIME DISPLAY */
+.time-display{
+  text-align:center;padding:20px 0 16px;
+}
+.time-big{
+  font-family:'DM Serif Display',serif;font-size:3.5rem;
+  background:linear-gradient(135deg,#a5b8ff,#c4b5fd);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:.02em;line-height:1;
+}
+.time-label{font-size:.72rem;color:var(--text3);margin-top:4px;letter-spacing:.08em;text-transform:uppercase}
+
+/* CLOCK INPUT */
+.clock-input{
+  display:block;width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;color:var(--text);font-family:'DM Serif Display',serif;
+  font-size:2rem;text-align:center;padding:12px;cursor:pointer;outline:none;
+  -webkit-appearance:none;appearance:none;
+}
+.clock-input:focus{border-color:var(--accent)}
+/* iOS Safari time input color fix */
+.clock-input::-webkit-date-and-time-value{color:var(--text)}
+.clock-input::-webkit-datetime-edit{color:var(--text)}
+.clock-input::-webkit-datetime-edit-fields-wrapper{color:var(--text)}
+.clock-input::-webkit-datetime-edit-hour-field,
+.clock-input::-webkit-datetime-edit-minute-field,
+.clock-input::-webkit-datetime-edit-ampm-field{color:var(--text)}
+
+/* COUNTDOWN */
+.countdown{
+  text-align:center;font-size:.82rem;color:var(--text2);margin-top:6px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* STATUS ROWS */
+.status-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.status-row:last-child{border-bottom:none}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);margin-right:8px;flex-shrink:0}
+.status-dot.on{background:var(--success);box-shadow:0 0 8px var(--success)}
+
+/* HISTORY */
+.hist-item{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px;margin-bottom:8px;
+}
+.hist-date{font-size:.72rem;color:var(--text3);letter-spacing:.06em;margin-bottom:4px}
+.hist-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.hist-label{font-size:.78rem;color:var(--text2)}
+.hist-val{font-size:.82rem;color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+.hist-duration{
+  margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.hist-dur-label{font-size:.7rem;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.hist-dur-val{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--accent)}
+.hist-empty{text-align:center;color:var(--text3);font-size:.85rem;padding:40px 0}
+
+/* RECORDING UI */
+.rec-area{text-align:center;padding:8px 0}
+.rec-indicator{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:.8rem;color:var(--danger);font-weight:600;
+  padding:6px 14px;border-radius:20px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
+}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:blink 1s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* SLEEP LOG PROMPT */
+.prompt-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:28px 24px;text-align:center;max-width:300px;width:90%;
+}
+.prompt-title{font-size:1.1rem;font-weight:600;margin-bottom:8px;color:var(--text)}
+.prompt-sub{font-size:.85rem;color:var(--text2);margin-bottom:20px}
+
+/* WAKE RAMP OVERLAY */
+.wake-overlay{
+  position:fixed;inset:0;z-index:100;
+  background:radial-gradient(ellipse at center,rgba(108,142,255,.15) 0%,rgba(8,11,20,.97) 100%);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.wake-overlay.show{display:flex}
+.wake-ring{
+  width:160px;height:160px;border-radius:50%;
+  border:2px solid rgba(108,142,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  animation:breathe 4s ease-in-out infinite;
+  position:relative;margin-bottom:28px;
+}
+.wake-ring::before{
+  content:'';position:absolute;inset:-12px;border-radius:50%;
+  border:1px solid rgba(108,142,255,.15);animation:breathe 4s ease-in-out infinite .5s;
+}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.08);opacity:1}}
+.wake-ring-inner{
+  width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle,rgba(108,142,255,.3),rgba(167,139,250,.15));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Serif Display',serif;font-size:1rem;color:var(--accent);text-align:center;line-height:1.2;
+}
+.wake-text{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--text);text-align:center;margin-bottom:8px}
+.wake-sub{font-size:.82rem;color:var(--text2);margin-bottom:32px}
+
+/* FILE UPLOAD */
+.file-upload{
+  display:flex;align-items:center;gap:10px;
+  border:1px dashed var(--border2);border-radius:10px;padding:10px 14px;
+  cursor:pointer;transition:border-color .2s;
+}
+.file-upload:hover{border-color:var(--accent)}
+.file-upload-icon{font-size:1.2rem}
+.file-upload-text{font-size:.8rem;color:var(--text2)}
+.file-name{font-size:.75rem;color:var(--accent);margin-top:4px}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--border);margin:8px 0}
+
+/* SCROLLBAR */
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">SleepWave ✦</div>
+  <div class="alarm-pill" id="alarmPill">● Alarm Armed</div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchTab('sleep',this)">Sleep</button>
+  <button class="nav-btn" onclick="switchTab('wake',this)">Wake</button>
+  <button class="nav-btn" onclick="switchTab('alarm',this)">Alarm</button>
+  <button class="nav-btn" onclick="switchTab('history',this)">History</button>
+</div>
+
+<div class="main">
+
+  <!-- ══════════ SLEEP TAB ══════════ -->
+  <div class="tab active" id="tab-sleep">
+
+    <div class="card">
+      <div class="card-title">Sleep Audio Source</div>
+      <div class="btn-group" id="sleepModeGroup">
+        <button class="tog active" onclick="setSleepMode('synth',this)">Synth</button>
+        <button class="tog" onclick="setSleepMode('file',this)">Custom File</button>
+      </div>
+    </div>
+
+    <div id="synthPanel">
+    <div class="card">
+      <div class="card-title">Binaural Engine</div>
+      <div class="label">Beat Type</div>
+      <div class="btn-group" id="beatGroup">
+        <button class="tog active" onclick="setBeat('delta',this)">Delta 2Hz</button>
+        <button class="tog" onclick="setBeat('theta',this)">Theta 6Hz</button>
+        <button class="tog" onclick="setBeat('alpha',this)">Alpha 10Hz</button>
+        <button class="tog" onclick="setBeat('gamma',this)">Gamma 40Hz</button>
+      </div>
+      <div class="slider-row">
+        <label>Carrier</label>
+        <input type="range" id="carrierSlider" min="40" max="1000" value="200" step="1" oninput="updateCarrier(this)">
+        <span class="val" id="carrierVal">200 Hz</span>
+      </div>
+      <hr class="divider">
+      <div class="label">Binaural Volume</div>
+      <div class="slider-row">
+        <label>Volume</label>
+        <input type="range" id="binauralVol" min="0" max="100" value="60" step="1" oninput="updateBinauralVol(this)">
+        <span class="val" id="binauralVolVal">60%</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ambient Mixer</div>
+      <div class="slider-row">
+        <label>Brown</label>
+        <input type="range" id="brownSlider" min="0" max="100" value="40" step="1" oninput="updateAmbient()">
+        <span class="val" id="brownVal">40%</span>
+      </div>
+      <div class="slider-row">
+        <label>White</label>
+        <input type="range" id="whiteSlider" min="0" max="100" value="0" step="1" oninput="updateAmbient()">
+        <span class="val" id="whiteVal">0%</span>
+      </div>
+      <div class="slider-row">
+        <label>Rain</label>
+        <input type="range" id="rainSlider" min="0" max="100" value="30" step="1" oninput="updateAmbient()">
+        <span class="val" id="rainVal">30%</span>
+      </div>
+    </div>
+    </div><!-- /synthPanel -->
+
+    <div class="card" id="sleepFilePanel" style="display:none">
+      <div class="card-title">Sleep Audio File</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:12px;line-height:1.5">
+        Upload any audio file to loop as your sleep sound — MP3, WAV, M4A, OGG.
+      </div>
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+        <span class="btn btn-secondary btn-sm" style="pointer-events:none">Choose File</span>
+        <input type="file" accept="audio/*" style="display:none" onchange="handleSleepFile(this)">
+      </label>
+      <div id="sleepFileName" style="font-size:.8rem;color:var(--text2);margin-top:8px">No file selected</div>
+      <div id="sleepFilePlayer" style="display:none;margin-top:10px">
+        <audio id="sleepFileAudioEl" controls style="width:100%;height:36px"></audio>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Master Volume</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px;line-height:1.5">
+        Controls the overall output level of all audio.
+      </div>
+      <div class="slider-row">
+        <label>Master</label>
+        <input type="range" id="masterVol" min="0" max="100" value="60" step="1" oninput="updateMasterVol(this)">
+        <span class="val" id="masterVolVal">60%</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;padding:0 0 4px">
+      <button class="btn btn-primary" id="sleepBtn" onclick="toggleSleep()">▶ Start Sleep Audio</button>
+    </div>
+
+    <div class="card" id="statusCard" style="margin-top:4px">
+      <div class="card-title">Audio Status</div>
+      <div class="status-row">
+        <div style="display:flex;align-items:center">
+          <div class="status-dot" id="dotBinaural"></div>
+          <span style="font-size:.8rem;color:var(--text2)">Binaural Engine</span>
+        </div>
+        <span style="font-size:.75rem;color:var(--text3)" id="statusBeat">Stopped</span>
+      </div>
+      <div class="status-row">
+        <div style="display:flex;align-items:center">
+          <div class="status-dot" id="dotAmbient"></div>
+          <span style="font-size:.8rem;color:var(--text2)">Ambient Layer</span>
+        </div>
+        <span style="font-size:.75rem;color:var(--text3)" id="statusAmbient">Stopped</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:4px">
+      <div class="card-title">Settings Presets</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="presetNameInput" placeholder="Preset name..."
+          style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);
+                 border-radius:8px;padding:8px 10px;color:var(--text);
+                 font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none">
+        <button class="btn btn-primary btn-sm" onclick="savePreset()" style="flex-shrink:0">Save</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="presetSelect"
+          style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);
+                 border-radius:8px;padding:7px 10px;color:var(--text);
+                 font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;cursor:pointer">
+          <option value="">— select preset —</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadPreset()" style="flex-shrink:0">Load</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePreset()" style="flex-shrink:0">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ WAKE TAB ══════════ -->
+  <div class="tab" id="tab-wake">
+
+    <div class="card">
+      <div class="card-title">Wake Mode</div>
+      <div class="btn-group" id="wakeModeGroup">
+        <button class="tog active" onclick="setWakeMode('voice',this)">My Recording</button>
+        <button class="tog" onclick="setWakeMode('file',this)">Sound File</button>
+        <button class="tog" onclick="setWakeMode('ai',this)">AI Script</button>
+      </div>
+    </div>
+
+    <!-- Voice record panel -->
+    <div class="card" id="voicePanel">
+      <div class="card-title">Record Your Wake Message</div>
+      <div class="rec-area" id="recArea">
+        <button class="btn btn-secondary" id="recBtn" onclick="toggleRecord()">⏺ Start Recording</button>
+        <div id="recStatus" style="margin-top:8px;display:none">
+          <div class="rec-indicator"><div class="rec-dot"></div><span id="recTime">0:00</span></div>
+        </div>
+      </div>
+      <div id="playbackArea" style="display:none;margin-top:10px">
+        <audio id="recordedAudio" controls style="width:100%;height:36px;margin-bottom:8px"></audio>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" onclick="reRecord()">↺ Re-record</button>
+          <button class="btn btn-primary btn-sm" id="useRecBtn" onclick="confirmRecording()">✓ Use This</button>
+        </div>
+      </div>
+      <div id="recConfirmed" style="display:none;font-size:.8rem;color:var(--success);margin-top:6px">✓ Recording saved as wake audio</div>
+    </div>
+
+    <!-- File upload panel -->
+    <div class="card" id="filePanel" style="display:none">
+      <div class="card-title">Upload Sound File</div>
+      <label class="file-upload" for="wakeFileInput">
+        <span class="file-upload-icon">🎵</span>
+        <div>
+          <div class="file-upload-text">Tap to choose an audio file</div>
+          <div class="file-upload-text" style="opacity:.6">MP3, WAV, M4A, OGG supported</div>
+        </div>
+      </label>
+      <input type="file" id="wakeFileInput" accept="audio/*" style="display:none" onchange="handleWakeFile(this)">
+      <div id="wakeFileName" class="file-name"></div>
+      <div id="wakeFilePlayer" style="display:none;margin-top:10px">
+        <audio id="wakeFileAudio" controls style="width:100%;height:36px"></audio>
+      </div>
+    </div>
+
+    <!-- AI script panel -->
+    <div class="card" id="aiPanel" style="display:none">
+      <div class="card-title">AI Wake Script</div>
+      <div class="label">Wake Persona</div>
+      <div class="btn-group">
+        <button class="tog active" onclick="setPersona('gentle',this)">Gentle</button>
+        <button class="tog" onclick="setPersona('energetic',this)">Energetic</button>
+        <button class="tog" onclick="setPersona('mindful',this)">Mindful</button>
+      </div>
+      <div class="label" style="margin-top:4px">Custom message (optional)</div>
+      <textarea id="aiScript" placeholder="e.g. Remind me about morning yoga at 7am..." rows="3"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
+               color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:10px;resize:none;outline:none;margin-bottom:8px"></textarea>
+      <button class="btn btn-primary" onclick="generateAIScript()">✦ Generate Script</button>
+      <div id="aiOutput" style="display:none;margin-top:10px;font-size:.82rem;color:var(--text2);line-height:1.5;
+           background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Wake Volume Ramp</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px;line-height:1.5">
+        Wake audio fades <em>in</em> while background audio fades <em>out</em> over this duration.
+      </div>
+      <div class="slider-row">
+        <label>Ramp</label>
+        <input type="range" id="rampSlider" min="1" max="30" value="8" step="1" oninput="updateRamp(this)">
+        <span class="val" id="rampVal">8 min</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ ALARM TAB ══════════ -->
+  <div class="tab" id="tab-alarm">
+
+    <div class="card">
+      <div class="card-title">Set Alarm</div>
+      <input type="time" class="clock-input" id="alarmTime" value="07:00">
+      <div class="countdown" id="countdown">—</div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-primary" id="armBtn" onclick="toggleArm()">⏰ Arm Alarm</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetAlarm()" title="Reset alarm">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Alarm Volume</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px;line-height:1.5">
+        Independent volume for the wake audio — separate from sleep audio volume.
+      </div>
+      <div class="slider-row">
+        <label>Wake vol</label>
+        <input type="range" id="alarmVol" min="0" max="100" value="80" step="1" oninput="updateAlarmVol(this)">
+        <span class="val" id="alarmVolVal">80%</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Test Wake Sequence</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px">
+        Preview the crossfade: background fades out, wake audio fades in.
+      </div>
+      <button class="btn btn-secondary" onclick="testWake()">▶ Demo Wake (5 sec)</button>
+    </div>
+  </div>
+
+  <!-- ══════════ HISTORY TAB ══════════ -->
+  <div class="tab" id="tab-history">
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title" style="margin-bottom:0">Sleep Log</div>
+      <button class="btn btn-secondary btn-sm" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- ONBOARDING OVERLAY -->
+<div class="wake-overlay" id="onboardOverlay" style="z-index:200;background:rgba(8,11,20,.98)">
+  <div style="text-align:center;padding:0 32px;max-width:380px">
+    <div style="font-size:3rem;margin-bottom:16px">🌙</div>
+    <div style="font-family:'DM Serif Display',serif;font-size:2rem;
+         background:linear-gradient(135deg,#a5b8ff,#c4b5fd);
+         -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+         margin-bottom:8px">SleepWave</div>
+    <div style="font-size:.85rem;color:var(--text2);margin-bottom:32px;line-height:1.6">
+      Binaural beats for deeper sleep, with a gentle personalized wake system.
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+         padding:20px;margin-bottom:28px;text-align:left">
+      <div style="font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+           color:var(--text3);margin-bottom:14px">This app needs access to</div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="font-size:1.4rem;margin-top:2px">🎤</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:2px">Microphone</div>
+          <div style="font-size:.78rem;color:var(--text2);line-height:1.4">To record your personal wake-up message. Your recordings never leave this device.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:1.4rem;margin-top:2px">🔔</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:2px">Alarm & Audio</div>
+          <div style="font-size:.78rem;color:var(--text2);line-height:1.4">To play sleep audio and wake you gently at your set alarm time.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="onboardGrant()" style="margin-bottom:12px;font-size:.9rem;padding:14px">
+      ✦ Get Started — Allow Microphone
+    </button>
+    <div>
+      <button onclick="onboardSkip()"
+        style="background:none;border:none;color:var(--text3);font-size:.78rem;cursor:pointer;text-decoration:underline">
+        Skip for now (microphone recording unavailable)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SLEEP LOG PROMPT -->
+<div class="wake-overlay" id="sleepLogPrompt">
+  <div class="prompt-card">
+    <div class="prompt-title">Save Sleep Session?</div>
+    <div class="prompt-sub" id="sleepLogDuration"></div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-primary btn-sm" onclick="saveManualSession()">Save to Log</button>
+      <button class="btn btn-secondary btn-sm" onclick="discardManualSession()">Discard</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAKE OVERLAY -->
+<div class="wake-overlay" id="wakeOverlay">
+  <div class="wake-ring">
+    <div class="wake-ring-inner">Good<br>Morning</div>
+  </div>
+  <div class="wake-text">Time to Rise ✦</div>
+  <div class="wake-sub" id="wakeProgressText">Gently waking...</div>
+  <button class="btn btn-primary btn-sm" onclick="dismissAlarm()">Dismiss</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// AUDIO ENGINE
+// ═══════════════════════════════════════════
+let audioCtx = null;
+let sleeping = false;
+let armed = false;
+let alarmCheckInterval = null;
+let countdownInterval = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingTimer = null;
+let recSeconds = 0;
+let currentMode = 'voice';
+let currentPersona = 'gentle';
+let currentBeat = 'delta';
+let wakeAudioBlob = null;
+let wakeFileBlob = null;
+let sleepStartTime = null;
+let alarmFireTime = null;
+let pendingSessionStart = null;
+let pendingSessionStop = null;
+let currentSleepMode = 'synth';
+let sleepFileBlob = null;
+let sleepFileAudio = null;
+let sleepFileSource = null;
+
+// nodes
+let leftOsc = null, rightOsc = null, binauralGain = null;
+let brownSrc = null, whiteSrc = null, rainSrc = null;
+let brownGain = null, whiteGain = null, rainGain = null;
+let ambientMaster = null;
+let masterGain = null;
+
+const BEAT_FREQS = {delta:2, theta:6, alpha:10, gamma:40};
+
+// ═══════════════════════════════════════════
+// iOS AUDIO UNLOCK + KEEP-ALIVE
+// ═══════════════════════════════════════════
+// iOS blocks audio that isn't triggered by a direct user gesture.
+// We pre-create and silently "unlock" an Audio element on first tap
+// so the alarm can play later even when fired from a timer.
+let iosAudioUnlocked = false;
+let iosKeepAlive = null; // silent looping audio for iOS WakeLock fallback
+
+function unlockIOSAudio() {
+  if (iosAudioUnlocked) return;
+  // Create a silent audio context touch to unlock Web Audio on iOS
+  const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = tmpCtx.createBuffer(1, 1, 22050);
+  const src = tmpCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(tmpCtx.destination);
+  src.start(0);
+  tmpCtx.close();
+  iosAudioUnlocked = true;
+}
+
+function startIOSKeepAlive() {
+  // iOS Safari doesn't support WakeLock — use a silent looping audio element
+  // as a keepalive so the page isn't suspended during sleep
+  if (iosKeepAlive) return;
+  if (!('wakeLock' in navigator)) {
+    // Likely iOS — create silent audio loop
+    const silentSrc = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAABAAADhAD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwBK8AAAAALgAAABRGJAYCQAAADhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//OEgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACg=';
+    iosKeepAlive = new Audio(silentSrc);
+    iosKeepAlive.loop = true;
+    iosKeepAlive.volume = 0.001;
+    iosKeepAlive.play().catch(() => {});
+  }
+}
+
+function stopIOSKeepAlive() {
+  if (iosKeepAlive) {
+    iosKeepAlive.pause();
+    iosKeepAlive = null;
+  }
+}
+
+// Unlock iOS audio on first user interaction anywhere on the page
+document.addEventListener('touchstart', unlockIOSAudio, {once: true});
+document.addEventListener('click', unlockIOSAudio, {once: true});
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = parseFloat(document.getElementById('masterVol').value) / 100;
+  masterGain.connect(audioCtx.destination);
+
+  // Binaural
+  binauralGain = audioCtx.createGain();
+  binauralGain.gain.value = 0.6;
+  binauralGain.connect(masterGain);
+
+  const carrier = parseFloat(document.getElementById('carrierSlider').value);
+  const beat = BEAT_FREQS[currentBeat];
+
+  leftOsc = audioCtx.createOscillator();
+  leftOsc.frequency.value = carrier;
+  const leftPan = audioCtx.createStereoPanner();
+  leftPan.pan.value = -1;
+  leftOsc.connect(leftPan).connect(binauralGain);
+  leftOsc.start();
+
+  rightOsc = audioCtx.createOscillator();
+  rightOsc.frequency.value = carrier + beat;
+  const rightPan = audioCtx.createStereoPanner();
+  rightPan.pan.value = 1;
+  rightOsc.connect(rightPan).connect(binauralGain);
+  rightOsc.start();
+
+  // Ambient master
+  ambientMaster = audioCtx.createGain();
+  ambientMaster.gain.value = 1;
+  ambientMaster.connect(masterGain);
+
+  // Brown noise
+  brownGain = audioCtx.createGain();
+  brownGain.gain.value = 0.4;
+  brownGain.connect(ambientMaster);
+  const brownBuf = makeBrownNoise();
+  brownSrc = audioCtx.createBufferSource();
+  brownSrc.buffer = brownBuf;
+  brownSrc.loop = true;
+  const brownFilt = audioCtx.createBiquadFilter();
+  brownFilt.type = 'lowpass';
+  brownFilt.frequency.value = 300;
+  brownSrc.connect(brownFilt).connect(brownGain);
+  brownSrc.start();
+
+  // White noise
+  whiteGain = audioCtx.createGain();
+  whiteGain.gain.value = 0;
+  whiteGain.connect(ambientMaster);
+  const whiteBuf = makeWhiteNoise();
+  whiteSrc = audioCtx.createBufferSource();
+  whiteSrc.buffer = whiteBuf;
+  whiteSrc.loop = true;
+  whiteSrc.connect(whiteGain);
+  whiteSrc.start();
+
+  // Rain noise (filtered + AM)
+  rainGain = audioCtx.createGain();
+  rainGain.gain.value = 0.3;
+  rainGain.connect(ambientMaster);
+  const rainBuf = makeWhiteNoise();
+  rainSrc = audioCtx.createBufferSource();
+  rainSrc.buffer = rainBuf;
+  rainSrc.loop = true;
+  const rainFilt = audioCtx.createBiquadFilter();
+  rainFilt.type = 'bandpass';
+  rainFilt.frequency.value = 1200;
+  rainFilt.Q.value = 0.5;
+  const rainAM = audioCtx.createOscillator();
+  rainAM.frequency.value = 3;
+  const rainAMGain = audioCtx.createGain();
+  rainAMGain.gain.value = 0.5;
+  rainAM.connect(rainAMGain);
+  const rainBase = audioCtx.createGain();
+  rainBase.gain.value = 0.5;
+  rainSrc.connect(rainFilt).connect(rainBase).connect(rainGain);
+  rainAMGain.connect(rainBase.gain);
+  rainAM.start();
+  rainSrc.start();
+}
+
+function makeBrownNoise() {
+  const bufSize = audioCtx.sampleRate * 2;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < bufSize; i++) {
+    const w = (Math.random() * 2 - 1) * 0.02;
+    last = (last + w) * 0.998;
+    data[i] = last * 3.5;
+  }
+  return buf;
+}
+
+function makeWhiteNoise() {
+  const bufSize = audioCtx.sampleRate * 2;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function setSleepMode(mode, el) {
+  if (sleeping) return;
+  currentSleepMode = mode;
+  document.querySelectorAll('#sleepModeGroup .tog').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('synthPanel').style.display = mode === 'synth' ? '' : 'none';
+  document.getElementById('sleepFilePanel').style.display = mode === 'file' ? '' : 'none';
+}
+
+function handleSleepFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  sleepFileBlob = file;
+  document.getElementById('sleepFileName').textContent = '✓ ' + file.name;
+  const url = URL.createObjectURL(file);
+  const audioEl = document.getElementById('sleepFileAudioEl');
+  audioEl.src = url;
+  document.getElementById('sleepFilePlayer').style.display = 'block';
+}
+
+function initFileAudio() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = parseFloat(document.getElementById('masterVol').value) / 100;
+  masterGain.connect(audioCtx.destination);
+  const url = URL.createObjectURL(sleepFileBlob);
+  sleepFileAudio = new Audio(url);
+  sleepFileAudio.loop = true;
+  sleepFileSource = audioCtx.createMediaElementSource(sleepFileAudio);
+  sleepFileSource.connect(masterGain);
+  sleepFileAudio.play().catch(() => {});
+}
+
+function toggleSleep() {
+  if (!sleeping) {
+    if (currentSleepMode === 'file') {
+      if (!sleepFileBlob) { alert('Please choose a sleep audio file first.'); return; }
+      initFileAudio();
+      document.getElementById('dotBinaural').classList.add('on');
+      document.getElementById('dotAmbient').classList.remove('on');
+      document.getElementById('statusBeat').textContent = 'File';
+      document.getElementById('statusAmbient').textContent = '—';
+    } else {
+      // If context was closed (after a full stop), rebuild everything
+      if (!audioCtx || audioCtx.state === 'closed') {
+        audioCtx = null;
+        leftOsc = null; rightOsc = null; binauralGain = null;
+        brownSrc = null; whiteSrc = null; rainSrc = null;
+        brownGain = null; whiteGain = null; rainGain = null;
+        ambientMaster = null; masterGain = null;
+      }
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const mVol = parseFloat(document.getElementById('masterVol').value) / 100;
+      masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGain.gain.setTargetAtTime(mVol, audioCtx.currentTime, 0.1);
+      const bVol = parseFloat(document.getElementById('binauralVol').value) / 100;
+      binauralGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      binauralGain.gain.setTargetAtTime(bVol, audioCtx.currentTime, 0.1);
+      ambientMaster.gain.cancelScheduledValues(audioCtx.currentTime);
+      ambientMaster.gain.setTargetAtTime(1, audioCtx.currentTime, 0.1);
+      document.getElementById('dotBinaural').classList.add('on');
+      document.getElementById('dotAmbient').classList.add('on');
+      document.getElementById('statusBeat').textContent = currentBeat.charAt(0).toUpperCase()+currentBeat.slice(1);
+      document.getElementById('statusAmbient').textContent = 'Running';
+    }
+    sleeping = true;
+    sleepStartTime = new Date();
+    document.getElementById('sleepBtn').textContent = '■ Stop Sleep Audio';
+    requestWakeLock();
+    startIOSKeepAlive();
+  } else {
+    const stopTime = new Date();
+    stopAllAudio();
+    sleeping = false;
+    document.getElementById('sleepBtn').textContent = '▶ Start Sleep Audio';
+    document.getElementById('dotBinaural').classList.remove('on');
+    document.getElementById('dotAmbient').classList.remove('on');
+    document.getElementById('statusBeat').textContent = 'Stopped';
+    document.getElementById('statusAmbient').textContent = 'Stopped';
+    releaseWakeLock();
+    stopIOSKeepAlive();
+    if (sleepStartTime) {
+      pendingSessionStart = sleepStartTime;
+      pendingSessionStop = stopTime;
+      sleepStartTime = null;
+      document.getElementById('sleepLogDuration').textContent =
+        'Duration: ' + formatDuration(pendingSessionStop - pendingSessionStart);
+      document.getElementById('sleepLogPrompt').classList.add('show');
+    }
+  }
+}
+
+function stopAllAudio() {
+  if (sleepFileAudio) {
+    sleepFileAudio.pause();
+    sleepFileAudio.src = '';
+    sleepFileAudio = null;
+    sleepFileSource = null;
+  }
+  if (audioCtx) {
+    // Fade out smoothly then close the context so it can be fully rebuilt on next start
+    masterGain && masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+    setTimeout(() => {
+      if (audioCtx) {
+        audioCtx.close().then(() => {
+          audioCtx = null;
+          leftOsc = null; rightOsc = null; binauralGain = null;
+          brownSrc = null; whiteSrc = null; rainSrc = null;
+          brownGain = null; whiteGain = null; rainGain = null;
+          ambientMaster = null; masterGain = null;
+        });
+      }
+    }, 600);
+  }
+}
+
+function setBeat(type, el) {
+  currentBeat = type;
+  document.querySelectorAll('#beatGroup .tog').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (leftOsc && rightOsc) {
+    const carrier = parseFloat(document.getElementById('carrierSlider').value);
+    leftOsc.frequency.setTargetAtTime(carrier, audioCtx.currentTime, 0.1);
+    rightOsc.frequency.setTargetAtTime(carrier + BEAT_FREQS[type], audioCtx.currentTime, 0.1);
+  }
+  document.getElementById('statusBeat').textContent = type.charAt(0).toUpperCase()+type.slice(1);
+}
+
+function updateCarrier(el) {
+  const v = parseFloat(el.value);
+  document.getElementById('carrierVal').textContent = v + ' Hz';
+  if (leftOsc && rightOsc) {
+    leftOsc.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.05);
+    rightOsc.frequency.setTargetAtTime(v + BEAT_FREQS[currentBeat], audioCtx.currentTime, 0.05);
+  }
+}
+
+function updateBinauralVol(el) {
+  document.getElementById('binauralVolVal').textContent = el.value + '%';
+  if (binauralGain) binauralGain.gain.setTargetAtTime(el.value/100, audioCtx.currentTime, 0.05);
+}
+
+function updateMasterVol(el) {
+  document.getElementById('masterVolVal').textContent = el.value + '%';
+  if (masterGain) masterGain.gain.setTargetAtTime(el.value/100, audioCtx.currentTime, 0.05);
+}
+
+function updateAmbient() {
+  const b = document.getElementById('brownSlider').value;
+  const w = document.getElementById('whiteSlider').value;
+  const r = document.getElementById('rainSlider').value;
+  document.getElementById('brownVal').textContent = b + '%';
+  document.getElementById('whiteVal').textContent = w + '%';
+  document.getElementById('rainVal').textContent = r + '%';
+  if (brownGain) brownGain.gain.setTargetAtTime(b/100*0.8, audioCtx.currentTime, 0.05);
+  if (whiteGain) whiteGain.gain.setTargetAtTime(w/100*0.5, audioCtx.currentTime, 0.05);
+  if (rainGain) rainGain.gain.setTargetAtTime(r/100*0.6, audioCtx.currentTime, 0.05);
+}
+
+function updateRamp(el) {
+  document.getElementById('rampVal').textContent = el.value + ' min';
+}
+
+function updateAlarmVol(el) {
+  document.getElementById('alarmVolVal').textContent = el.value + '%';
+}
+
+// ═══════════════════════════════════════════
+// ALARM
+// ═══════════════════════════════════════════
+// Pre-loaded wake audio element — created during Arm (user gesture) so iOS allows play() later
+let preloadedWakeAudio = null;
+
+function toggleArm() {
+  if (!armed) {
+    armed = true;
+    document.getElementById('armBtn').textContent = '✕ Disarm';
+    document.getElementById('armBtn').classList.add('btn-danger');
+    document.getElementById('armBtn').classList.remove('btn-primary');
+    document.getElementById('alarmPill').classList.add('show');
+    startCountdown();
+    // Pre-load wake audio now while we're in a user gesture context (iOS requirement)
+    preloadWakeAudio();
+    // Check every 20s instead of 10s — and use a time-window check so a
+    // throttled/missed tick can't cause a missed alarm
+    alarmCheckInterval = setInterval(checkAlarm, 20000);
+  } else {
+    disarm();
+  }
+}
+
+function preloadWakeAudio() {
+  let blob = null;
+  if (currentMode === 'voice' && wakeAudioBlob) blob = wakeAudioBlob;
+  else if (currentMode === 'file' && wakeFileBlob) blob = wakeFileBlob;
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  preloadedWakeAudio = new Audio(url);
+  preloadedWakeAudio.loop = true;
+  preloadedWakeAudio.volume = 0.001; // near-silent pre-load touch to satisfy iOS
+  preloadedWakeAudio.play().then(() => {
+    preloadedWakeAudio.pause();
+    preloadedWakeAudio.currentTime = 0;
+    preloadedWakeAudio.volume = 1; // will be overridden by gain node at play time
+  }).catch(() => {});
+}
+
+function disarm() {
+  armed = false;
+  clearInterval(alarmCheckInterval);
+  clearInterval(countdownInterval);
+  document.getElementById('armBtn').textContent = '⏰ Arm Alarm';
+  document.getElementById('armBtn').classList.remove('btn-danger');
+  document.getElementById('armBtn').classList.add('btn-primary');
+  document.getElementById('alarmPill').classList.remove('show');
+  document.getElementById('countdown').textContent = '—';
+}
+
+function resetAlarm() {
+  disarm();
+  document.getElementById('alarmTime').value = '07:00';
+  document.getElementById('countdown').textContent = '—';
+}
+
+function startCountdown() {
+  updateCountdown();
+  countdownInterval = setInterval(updateCountdown, 30000);
+}
+
+function updateCountdown() {
+  const val = document.getElementById('alarmTime').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  const now = new Date();
+  let target = new Date();
+  target.setHours(h, m, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  const diff = target - now;
+  const hours = Math.floor(diff / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  document.getElementById('countdown').textContent = `Fires in ${hours}h ${mins}m`;
+}
+
+function checkAlarm() {
+  if (!armed) return;
+  const val = document.getElementById('alarmTime').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  const now = new Date();
+  let target = new Date();
+  target.setHours(h, m, 0, 0);
+  // If the target already passed today, it's for tomorrow — skip
+  if (target < now - 90000) target.setDate(target.getDate() + 1);
+  // Fire if we're within a 90-second window of the alarm time
+  // This means even if the interval was throttled for up to ~70 seconds, we still catch it
+  const diff = now - target;
+  if (diff >= 0 && diff < 90000) {
+    fireAlarm();
+  }
+}
+
+function fireAlarm() {
+  alarmFireTime = new Date();
+  disarm();
+  document.getElementById('wakeOverlay').classList.add('show');
+  startWakeCrossfade();
+  playWakeAudio();
+}
+
+function testWake() {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!sleeping) {
+    // start audio briefly for demo
+    sleeping = true;
+    document.getElementById('dotBinaural').classList.add('on');
+    document.getElementById('dotAmbient').classList.add('on');
+  }
+  document.getElementById('wakeProgressText').textContent = 'Demo: 5 second preview...';
+  document.getElementById('wakeOverlay').classList.add('show');
+  startWakeCrossfade(5/60);
+  setTimeout(dismissAlarm, 6000);
+}
+
+// ═══════════════════════════════════════════
+// CROSSFADE: background fades OUT, wake fades IN
+// ═══════════════════════════════════════════
+let wakeAudioNode = null;
+let wakeAudioGainNode = null;
+let wakeRampStartTime = null;  // wall-clock Date when ramp started
+let wakeRampDurationMs = 0;    // ramp duration in ms
+let wakeProgressInterval = null;
+
+function startWakeCrossfade(overrideMins) {
+  if (!audioCtx) return;
+  const mins = overrideMins || parseFloat(document.getElementById('rampSlider').value);
+  const secs = mins * 60;
+  const now = audioCtx.currentTime;
+
+  // Fade background (binaural + ambient) DOWN to 0
+  if (binauralGain) {
+    binauralGain.gain.cancelScheduledValues(now);
+    binauralGain.gain.setValueAtTime(binauralGain.gain.value || 0.6, now);
+    binauralGain.gain.linearRampToValueAtTime(0, now + secs);
+  }
+  if (ambientMaster) {
+    ambientMaster.gain.cancelScheduledValues(now);
+    ambientMaster.gain.setValueAtTime(ambientMaster.gain.value || 1, now);
+    ambientMaster.gain.linearRampToValueAtTime(0, now + secs);
+  }
+  if (currentSleepMode === 'file' && masterGain) {
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+    masterGain.gain.linearRampToValueAtTime(0, now + secs);
+  }
+
+  // Track ramp with wall-clock time so screen unlock doesn't break progress display
+  wakeRampStartTime = new Date();
+  wakeRampDurationMs = secs * 1000;
+
+  if (wakeProgressInterval) clearInterval(wakeProgressInterval);
+  wakeProgressInterval = setInterval(() => {
+    if (!wakeRampStartTime) { clearInterval(wakeProgressInterval); return; }
+    const elapsed = new Date() - wakeRampStartTime;
+    const pct = Math.min(100, Math.round(elapsed / wakeRampDurationMs * 100));
+    document.getElementById('wakeProgressText').textContent = `Gently waking... ${pct}%`;
+    if (pct >= 100) clearInterval(wakeProgressInterval);
+  }, 1000);
+}
+
+function recalcWakeProgress() {
+  // Called from visibilitychange — immediately correct the progress text
+  if (!wakeRampStartTime) return;
+  const elapsed = new Date() - wakeRampStartTime;
+  const pct = Math.min(100, Math.round(elapsed / wakeRampDurationMs * 100));
+  document.getElementById('wakeProgressText').textContent = `Gently waking... ${pct}%`;
+}
+
+function playWakeAudio() {
+  if (!audioCtx) initAudio();
+  const alarmVolume = parseFloat(document.getElementById('alarmVol').value) / 100;
+  const rampSecs = parseFloat(document.getElementById('rampSlider').value) * 60;
+  const now = audioCtx.currentTime;
+
+  let blob = null;
+  if (currentMode === 'voice' && wakeAudioBlob) blob = wakeAudioBlob;
+  else if (currentMode === 'file' && wakeFileBlob) blob = wakeFileBlob;
+
+  if (!blob) return; // no wake audio selected — crossfade only
+
+  // Use pre-loaded audio element if available (iOS requirement — play() must
+  // have been called during a user gesture, which we did at arm time)
+  let audio = preloadedWakeAudio;
+  if (!audio) {
+    const url = URL.createObjectURL(blob);
+    audio = new Audio(url);
+  }
+  audio.loop = true;
+  audio.currentTime = 0;
+
+  // Route through Web Audio for volume ramp
+  const src = audioCtx.createMediaElementSource(audio);
+  wakeAudioGainNode = audioCtx.createGain();
+  wakeAudioGainNode.gain.setValueAtTime(0.001, now);
+  wakeAudioGainNode.gain.exponentialRampToValueAtTime(alarmVolume, now + rampSecs);
+  src.connect(wakeAudioGainNode).connect(audioCtx.destination);
+  audio.play().catch(() => {});
+  wakeAudioNode = audio;
+  preloadedWakeAudio = null;
+}
+
+function saveManualSession() {
+  document.getElementById('sleepLogPrompt').classList.remove('show');
+  if (pendingSessionStart && pendingSessionStop) {
+    logHistory(pendingSessionStart, null, pendingSessionStop, pendingSessionStop - pendingSessionStart);
+  }
+  pendingSessionStart = null;
+  pendingSessionStop = null;
+}
+
+function discardManualSession() {
+  document.getElementById('sleepLogPrompt').classList.remove('show');
+  pendingSessionStart = null;
+  pendingSessionStop = null;
+}
+
+function dismissAlarm() {
+  document.getElementById('wakeOverlay').classList.remove('show');
+  if (wakeAudioNode) { wakeAudioNode.pause(); wakeAudioNode = null; }
+  if (wakeProgressInterval) { clearInterval(wakeProgressInterval); wakeProgressInterval = null; }
+  wakeRampStartTime = null;
+  wakeRampDurationMs = 0;
+  // restore gains
+  if (binauralGain) binauralGain.gain.setTargetAtTime(
+    parseFloat(document.getElementById('binauralVol').value)/100, audioCtx.currentTime, 0.5);
+  if (ambientMaster) ambientMaster.gain.setTargetAtTime(1, audioCtx.currentTime, 0.5);
+  if (currentSleepMode === 'file' && masterGain) masterGain.gain.setTargetAtTime(
+    parseFloat(document.getElementById('masterVol').value)/100, audioCtx.currentTime, 0.5);
+
+  // log to history
+  const now = new Date();
+  const start = sleepStartTime || now;
+  const fire = alarmFireTime || now;
+  const totalMs = now - start;
+  logHistory(start, fire, now, totalMs);
+  sleepStartTime = null;
+  alarmFireTime = null;
+}
+
+// ═══════════════════════════════════════════
+// WAKE MODE
+// ═══════════════════════════════════════════
+function setWakeMode(mode, el) {
+  currentMode = mode;
+  document.querySelectorAll('#wakeModeGroup .tog').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('voicePanel').style.display = mode === 'voice' ? '' : 'none';
+  document.getElementById('filePanel').style.display = mode === 'file' ? '' : 'none';
+  document.getElementById('aiPanel').style.display = mode === 'ai' ? '' : 'none';
+}
+
+function setPersona(persona, el) {
+  currentPersona = persona;
+  document.querySelectorAll('#aiPanel .tog').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+// VOICE RECORDER
+// ═══════════════════════════════════════════
+function toggleRecord() {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    startRecord();
+  } else {
+    stopRecord();
+  }
+}
+
+function startRecord() {
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream => {
+    recordedChunks = [];
+    // iOS Safari only supports audio/mp4 — detect at runtime
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+                   : MediaRecorder.isTypeSupported('audio/mp4')  ? 'audio/mp4'
+                   : '';
+    mediaRecorder = mimeType ? new MediaRecorder(stream, {mimeType}) : new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = finalizeRecording;
+    mediaRecorder.start();
+    document.getElementById('recBtn').textContent = '⏹ Stop Recording';
+    document.getElementById('recStatus').style.display = 'block';
+    document.getElementById('playbackArea').style.display = 'none';
+    recSeconds = 0;
+    recordingTimer = setInterval(() => {
+      recSeconds++;
+      const m = Math.floor(recSeconds/60);
+      const s = recSeconds%60;
+      document.getElementById('recTime').textContent = m+':'+(s<10?'0':'')+s;
+      if (recSeconds >= 90) stopRecord();
+    }, 1000);
+  }).catch(() => alert('Microphone permission required.'));
+}
+
+function stopRecord() {
+  clearInterval(recordingTimer);
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  document.getElementById('recBtn').textContent = '⏺ Start Recording';
+  document.getElementById('recStatus').style.display = 'none';
+}
+
+function finalizeRecording() {
+  // Use the actual recorded mime type — iOS produces mp4, Android produces webm
+  const mimeType = (mediaRecorder && mediaRecorder.mimeType) ? mediaRecorder.mimeType : 'audio/webm';
+  wakeAudioBlob = new Blob(recordedChunks, {type: mimeType});
+  const url = URL.createObjectURL(wakeAudioBlob);
+  document.getElementById('recordedAudio').src = url;
+  document.getElementById('playbackArea').style.display = 'block';
+}
+
+function reRecord() {
+  wakeAudioBlob = null;
+  document.getElementById('playbackArea').style.display = 'none';
+  document.getElementById('recConfirmed').style.display = 'none';
+}
+
+function confirmRecording() {
+  document.getElementById('playbackArea').style.display = 'none';
+  document.getElementById('recConfirmed').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════
+// FILE UPLOAD
+// ═══════════════════════════════════════════
+function handleWakeFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  wakeFileBlob = file;
+  document.getElementById('wakeFileName').textContent = '✓ ' + file.name;
+  const url = URL.createObjectURL(file);
+  document.getElementById('wakeFileAudio').src = url;
+  document.getElementById('wakeFilePlayer').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════
+// AI SCRIPT (demo)
+// ═══════════════════════════════════════════
+function generateAIScript() {
+  const custom = document.getElementById('aiScript').value;
+  const scripts = {
+    gentle: `Good morning. The night is complete, and a new day opens softly before you. Take a slow breath. Feel the quiet. ${custom ? custom + ' ' : ''}There is nowhere to rush — just this moment, gently beginning.`,
+    energetic: `Rise and shine! Your body rested, your mind is fresh, and today is yours to own. ${custom ? custom + ' ' : ''}Let's make it count — time to move, breathe deep, and go get it!`,
+    mindful: `Breathe in... and out. Notice the stillness of this moment before the day takes shape. ${custom ? custom + ' ' : ''}With intention and presence, step forward into your morning.`
+  };
+  const out = document.getElementById('aiOutput');
+  out.textContent = scripts[currentPersona] || scripts.gentle;
+  out.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════
+function logHistory(start, alarmTime, dismiss, totalMs) {
+  const fmt = d => d ? d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : null;
+  const history = JSON.parse(localStorage.getItem('sw_history') || '[]');
+  history.unshift({
+    date: start.toLocaleDateString(),
+    startTime: fmt(start),
+    alarmTime: fmt(alarmTime),
+    dismissTime: fmt(dismiss),
+    totalMs: totalMs
+  });
+  if (history.length > 30) history.pop();
+  localStorage.setItem('sw_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function formatDuration(ms) {
+  if (ms < 0) return '—';
+  const totalMins = Math.floor(ms / 60000);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem('sw_history') || '[]');
+  const el = document.getElementById('historyList');
+  if (!history.length) {
+    el.innerHTML = '<div class="hist-empty">No sessions recorded yet</div>';
+    return;
+  }
+  el.innerHTML = history.map(s => `
+    <div class="hist-item">
+      <div class="hist-date">${s.date}</div>
+      <div class="hist-row">
+        <span class="hist-label">Sleep start</span>
+        <span class="hist-val">${s.startTime}</span>
+      </div>
+      ${s.alarmTime ? `
+      <div class="hist-row">
+        <span class="hist-label">Alarm fired</span>
+        <span class="hist-val">${s.alarmTime}</span>
+      </div>` : ''}
+      <div class="hist-row">
+        <span class="hist-label">${s.alarmTime ? 'Dismissed' : 'Stopped'}</span>
+        <span class="hist-val">${s.dismissTime}</span>
+      </div>
+      <div class="hist-duration">
+        <span class="hist-dur-label">Total sleep</span>
+        <span class="hist-dur-val">${formatDuration(s.totalMs)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function applySettings(s) {
+  const setSlider = (id, valId, val, suffix) => {
+    if (val == null) return;
+    document.getElementById(id).value = val;
+    document.getElementById(valId).textContent = val + suffix;
+  };
+  if (s.beat) {
+    currentBeat = s.beat;
+    document.querySelectorAll('#beatGroup .tog').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('onclick').includes("'" + s.beat + "'"));
+    });
+  }
+  setSlider('carrierSlider', 'carrierVal',    s.carrier,    ' Hz');
+  setSlider('binauralVol',   'binauralVolVal', s.binauralVol, '%');
+  setSlider('brownSlider',   'brownVal',      s.brownVol,   '%');
+  setSlider('whiteSlider',   'whiteVal',      s.whiteVol,   '%');
+  setSlider('rainSlider',    'rainVal',       s.rainVol,    '%');
+  setSlider('masterVol',     'masterVolVal',  s.masterVol,  '%');
+  setSlider('rampSlider',    'rampVal',       s.rampMins,   ' min');
+  setSlider('alarmVol',      'alarmVolVal',   s.alarmVol,   '%');
+}
+
+function renderPresetSelect(selected) {
+  const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+  const sel = document.getElementById('presetSelect');
+  const names = Object.keys(presets).sort();
+  sel.innerHTML = '<option value="">— select preset —</option>' +
+    names.map(n => `<option value="${n}"${n === selected ? ' selected' : ''}>${n}</option>`).join('');
+}
+
+function savePreset() {
+  const name = document.getElementById('presetNameInput').value.trim();
+  if (!name) { document.getElementById('presetNameInput').focus(); return; }
+  const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+  presets[name] = {
+    beat: currentBeat,
+    carrier:     document.getElementById('carrierSlider').value,
+    binauralVol: document.getElementById('binauralVol').value,
+    brownVol:    document.getElementById('brownSlider').value,
+    whiteVol:    document.getElementById('whiteSlider').value,
+    rainVol:     document.getElementById('rainSlider').value,
+    masterVol:   document.getElementById('masterVol').value,
+    rampMins:    document.getElementById('rampSlider').value,
+    alarmVol:    document.getElementById('alarmVol').value,
+  };
+  localStorage.setItem('sw_presets', JSON.stringify(presets));
+  localStorage.setItem('sw_last_preset', name);
+  renderPresetSelect(name);
+  document.getElementById('presetNameInput').value = '';
+  const btn = event.currentTarget;
+  btn.textContent = '✓ Saved';
+  setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+}
+
+function loadPreset() {
+  const name = document.getElementById('presetSelect').value;
+  if (!name) return;
+  const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+  if (presets[name]) {
+    applySettings(presets[name]);
+    localStorage.setItem('sw_last_preset', name);
+  }
+}
+
+function deletePreset() {
+  const name = document.getElementById('presetSelect').value;
+  if (!name) return;
+  if (!confirm(`Delete preset "${name}"?`)) return;
+  const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+  delete presets[name];
+  localStorage.setItem('sw_presets', JSON.stringify(presets));
+  if (localStorage.getItem('sw_last_preset') === name) localStorage.removeItem('sw_last_preset');
+  renderPresetSelect('');
+}
+
+function loadSettings() {
+  // Migrate legacy single-preset to named preset "Default"
+  const legacy = localStorage.getItem('sw_settings');
+  if (legacy) {
+    try {
+      const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+      if (!presets['Default']) {
+        presets['Default'] = JSON.parse(legacy);
+        localStorage.setItem('sw_presets', JSON.stringify(presets));
+        if (!localStorage.getItem('sw_last_preset')) localStorage.setItem('sw_last_preset', 'Default');
+      }
+    } catch(e) {}
+    localStorage.removeItem('sw_settings');
+  }
+  renderPresetSelect('');
+  const last = localStorage.getItem('sw_last_preset');
+  if (last) {
+    const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
+    if (presets[last]) { applySettings(presets[last]); renderPresetSelect(last); }
+  }
+}
+
+function clearHistory() {
+  if (confirm('Clear all sleep history?')) {
+    localStorage.removeItem('sw_history');
+    renderHistory();
+  }
+}
+
+// ═══════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ═══════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════
+function onboardGrant() {
+  // Request mic — browser shows its native permission dialog right here
+  navigator.mediaDevices.getUserMedia({audio: true})
+    .then(stream => {
+      // Got permission — stop the stream immediately, we just needed the grant
+      stream.getTracks().forEach(t => t.stop());
+      localStorage.setItem('sw_onboarded', '1');
+      localStorage.setItem('sw_mic', 'granted');
+      closeOnboard();
+    })
+    .catch(() => {
+      // Denied — still let them in, just note it
+      localStorage.setItem('sw_onboarded', '1');
+      localStorage.setItem('sw_mic', 'denied');
+      closeOnboard();
+      showMicDeniedBanner();
+    });
+}
+
+function onboardSkip() {
+  localStorage.setItem('sw_onboarded', '1');
+  localStorage.setItem('sw_mic', 'skipped');
+  closeOnboard();
+}
+
+function closeOnboard() {
+  const el = document.getElementById('onboardOverlay');
+  el.style.transition = 'opacity .4s';
+  el.style.opacity = '0';
+  setTimeout(() => el.style.display = 'none', 420);
+}
+
+function showMicDeniedBanner() {
+  const banner = document.createElement('div');
+  banner.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:50;
+    background:rgba(251,146,60,.15);border-bottom:1px solid rgba(251,146,60,.3);
+    color:#fb923c;font-size:.78rem;padding:10px 16px;text-align:center;`;
+  banner.textContent = '⚠ Microphone access denied — voice recording unavailable. Enable in browser settings to use this feature.';
+  document.body.prepend(banner);
+  setTimeout(() => banner.remove(), 6000);
+}
+
+// Check on load — show onboarding only on first visit
+if (!localStorage.getItem('sw_onboarded')) {
+  document.getElementById('onboardOverlay').classList.add('show');
+} else {
+  document.getElementById('onboardOverlay').style.display = 'none';
+}
+
+loadSettings();
+
+// ═══════════════════════════════════════════
+// VISIBILITY / SCREEN LOCK RECOVERY
+// ═══════════════════════════════════════════
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // Resume AudioContext if it was auto-suspended or interrupted by the OS
+    // iOS uses 'interrupted' state in addition to 'suspended'
+    if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
+      audioCtx.resume().then(() => {
+        console.log('[SleepWave] AudioContext resumed after screen unlock');
+      });
+    }
+    // Re-check alarm immediately in case the interval was throttled/killed
+    if (armed) {
+      checkAlarm();
+      // Also update the countdown display since it may be stale
+      updateCountdown();
+    }
+    // If we're in a wake ramp, recalculate progress text based on real time
+    if (wakeRampStartTime) {
+      recalcWakeProgress();
+    }
+  }
+});
+
+// Request WakeLock to prevent screen from killing audio/timers during sleep
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('[SleepWave] WakeLock acquired');
+      wakeLock.addEventListener('release', () => {
+        console.log('[SleepWave] WakeLock released');
+      });
+    } catch (err) {
+      // WakeLock not granted — not fatal, visibility listener handles recovery
+      console.warn('[SleepWave] WakeLock not available:', err.message);
+    }
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+}
+
+// Re-acquire WakeLock when tab becomes visible again (OS can release it on hide)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && sleeping && !wakeLock) {
+    await requestWakeLock();
+  }
+});
+
+// INIT
+renderHistory();
+</script>
+
+<!-- Service Worker Registration -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('[SleepWave] Service Worker registered'))
+        .catch(err => console.warn('[SleepWave] SW registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
