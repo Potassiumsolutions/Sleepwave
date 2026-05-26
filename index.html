@@ -1587,13 +1587,60 @@ document.addEventListener('visibilitychange', async () => {
 renderHistory();
 </script>
 
+<!-- Update banner -->
+<div id="updateBanner" style="
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:linear-gradient(135deg,#6c8eff,#a78bfa);
+  padding:12px 16px;display:none;align-items:center;justify-content:space-between;
+  font-family:'DM Sans',sans-serif;font-size:.85rem;color:#fff;
+  box-shadow:0 -2px 16px rgba(108,142,255,.4);">
+  <span>✦ New version available</span>
+  <button onclick="applyUpdate()" style="
+    background:#fff;color:#6c8eff;border:none;border-radius:8px;
+    padding:6px 14px;font-family:'DM Sans',sans-serif;font-size:.82rem;
+    font-weight:600;cursor:pointer;">Update</button>
+</div>
+
 <!-- Service Worker Registration -->
 <script>
+  let swWaiting = null;
+
+  function applyUpdate() {
+    if (swWaiting) {
+      swWaiting.postMessage({ type: 'SKIP_WAITING' });
+      swWaiting = null;
+    }
+    document.getElementById('updateBanner').style.display = 'none';
+    window.location.reload();
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('[SleepWave] Service Worker registered'))
-        .catch(err => console.warn('[SleepWave] SW registration failed:', err));
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        console.log('[SleepWave] Service Worker registered');
+
+        // New SW waiting on first install — no banner needed
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          swWaiting = reg.waiting;
+          document.getElementById('updateBanner').style.display = 'flex';
+        }
+
+        // New SW found after page is already running
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              swWaiting = newSW;
+              document.getElementById('updateBanner').style.display = 'flex';
+            }
+          });
+        });
+      }).catch(err => console.warn('[SleepWave] SW registration failed:', err));
+
+      // If the SW activates in another tab, reload this one to stay in sync
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
     });
   }
 </script>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sleepwave-v1';
+const CACHE_NAME = 'sleepwave-v2';
 const ASSETS = [
   '/index.html',
   '/manifest.json',
@@ -11,7 +11,7 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS).catch(() => {}))
   );
-  self.skipWaiting();
+  // Do NOT skipWaiting — let the app show the update banner first
 });
 
 self.addEventListener('activate', (e) => {
@@ -28,4 +28,9 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
+});
+
+// When the app sends SKIP_WAITING, activate the new SW immediately
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
