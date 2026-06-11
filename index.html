@@ -1708,7 +1708,6 @@ if (!localStorage.getItem('sw_onboarded')) {
 }
 
 loadSettings();
-initAffirmToneSelect();
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // VISIBILITY / SCREEN LOCK RECOVERY
@@ -1795,6 +1794,8 @@ let freqNoiseSrc = null;
 let freqSparkleTimer = null;
 let freqMelodyTimer = null;
 let freqPlayingId = null;
+
+initAffirmToneSelect();
 
 function renderFreqPresets() {
   const list = document.getElementById('freqPresetList');
