@@ -2371,7 +2371,7 @@ function renderBuiltinAlarms() {
     var sel = builtinAlarmId === a.id;
     var prev = builtinPreviewRunning && builtinAlarmId === a.id;
     var cls = 'alarm-card' + (sel ? ' selected' : '') + (prev ? ' previewing' : '');
-    return '<button class="' + cls + '" onclick="toggleBuiltinAlarm('' + a.id + '')">'
+    return '<button class="' + cls + '" onclick="toggleBuiltinAlarm(\'' + a.id + '\')">'
       + '<span class="alarm-em">' + a.emoji + '</span>'
       + '<div class="alarm-nm">' + a.name + '</div>'
       + '</button>';
