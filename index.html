@@ -1142,6 +1142,14 @@ function startWakeCrossfade(overrideMins) {
     masterGain.gain.linearRampToValueAtTime(0, now + secs);
   }
 
+  // Fade any playing Tones preset down to 0 over the same ramp duration
+  if (freqMasterGain && freqAudioCtx) {
+    const fNow = freqAudioCtx.currentTime;
+    freqMasterGain.gain.cancelScheduledValues(fNow);
+    freqMasterGain.gain.setValueAtTime(freqMasterGain.gain.value, fNow);
+    freqMasterGain.gain.linearRampToValueAtTime(0, fNow + secs);
+  }
+
   // Track ramp with wall-clock time so screen unlock doesn't break progress display
   wakeRampStartTime = new Date();
   wakeRampDurationMs = secs * 1000;
@@ -1224,6 +1232,9 @@ function dismissAlarm() {
   if (ambientMaster) ambientMaster.gain.setTargetAtTime(1, audioCtx.currentTime, 0.5);
   if (currentSleepMode === 'file' && masterGain) masterGain.gain.setTargetAtTime(
     parseFloat(document.getElementById('masterVol').value)/100, audioCtx.currentTime, 0.5);
+
+  // Stop any playing Tones preset
+  if (freqPlayingId) stopFreq();
 
   // log to history
   const now = new Date();
