@@ -276,6 +276,15 @@ body::before{
 .freq-grid>.freq-card:last-child:nth-child(odd){
   grid-column:1/-1;justify-self:center;width:calc(50% - 5px);
 }
+.alarm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.alarm-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;
+  padding:14px 8px 12px;text-align:center;cursor:pointer;
+  transition:border-color .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent;outline:none}
+.alarm-card.selected{border-color:var(--accent);box-shadow:0 0 14px rgba(108,142,255,.35)}
+.alarm-card.previewing{border-color:#f87171;box-shadow:0 0 14px rgba(248,113,113,.35)}
+.alarm-card.selected.previewing{border-color:#f87171;box-shadow:0 0 14px rgba(248,113,113,.35)}
+.alarm-em{font-size:1.8rem;line-height:1;margin-bottom:6px;display:block}
+.alarm-nm{font-size:.72rem;font-weight:600;letter-spacing:.04em;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -500,6 +509,7 @@ body::before{
         <button class="tog active" onclick="setWakeMode('voice',this)">My Recording</button>
         <button class="tog" onclick="setWakeMode('file',this)">Sound File</button>
         <button class="tog" onclick="setWakeMode('ai',this)">AI Script</button>
+        <button class="tog" onclick="setWakeMode('builtin',this)">Alarm Tones</button>
       </div>
     </div>
 
@@ -555,6 +565,15 @@ body::before{
       <button class="btn btn-primary" onclick="generateAIScript()">✦ Generate Script</button>
       <div id="aiOutput" style="display:none;margin-top:10px;font-size:.82rem;color:var(--text2);line-height:1.5;
            background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)"></div>
+    </div>
+
+    <!-- Built-in alarm tones panel -->
+    <div class="card" id="builtinPanel" style="display:none">
+      <div class="card-title">Choose Alarm Sound</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px;line-height:1.5">
+        Tap to preview — tap the selected sound again to stop preview.
+      </div>
+      <div class="alarm-grid" id="builtinAlarmGrid"></div>
     </div>
 
     <div class="card">
@@ -720,6 +739,12 @@ let currentPersona = 'gentle';
 let currentBeat = 'delta';
 let wakeAudioBlob = null;
 let wakeFileBlob = null;
+let builtinAlarmId = null;
+let builtinAlarmRunning = false;
+let builtinAlarmTimer = null;
+let builtinPreviewCtx = null;
+let builtinPreviewRunning = false;
+let builtinPreviewTimer = null;
 let sleepStartTime = null;
 let alarmFireTime = null;
 let pendingSessionStart = null;
@@ -1282,6 +1307,16 @@ function playWakeAudio() {
   if (currentMode === 'voice' && wakeAudioBlob) blob = wakeAudioBlob;
   else if (currentMode === 'file' && wakeFileBlob) blob = wakeFileBlob;
 
+  // Built-in synthesized alarm tone
+  if (currentMode === 'builtin' && builtinAlarmId) {
+    wakeAudioGainNode = audioCtx.createGain();
+    wakeAudioGainNode.gain.setValueAtTime(0.001, now);
+    wakeAudioGainNode.gain.exponentialRampToValueAtTime(alarmVolume, now + rampSecs);
+    wakeAudioGainNode.connect(audioCtx.destination);
+    startBuiltinAlarmSynth(audioCtx, wakeAudioGainNode);
+    return;
+  }
+
   if (!blob) return; // no wake audio selected — crossfade only
 
   // Use pre-loaded audio element if available (iOS requirement — play() must
@@ -1335,6 +1370,8 @@ function dismissAlarm() {
 
   // Stop any playing Tones preset
   if (freqPlayingId) stopFreq();
+  stopBuiltinAlarm();
+  stopBuiltinPreview();
   stopAffirmAudio();
   sleepPhase = null;
 
@@ -1358,6 +1395,8 @@ function setWakeMode(mode, el) {
   document.getElementById('voicePanel').style.display = mode === 'voice' ? '' : 'none';
   document.getElementById('filePanel').style.display = mode === 'file' ? '' : 'none';
   document.getElementById('aiPanel').style.display = mode === 'ai' ? '' : 'none';
+  document.getElementById('builtinPanel').style.display = mode === 'builtin' ? '' : 'none';
+  if (mode !== 'builtin') stopBuiltinPreview();
 }
 
 function setPersona(persona, el) {
@@ -1653,6 +1692,7 @@ function switchTab(name, btn) {
   btn.classList.add('active');
   if (name === 'history') renderHistory();
   if (name === 'freq') renderFreqPresets();
+  if (name === 'wake') renderBuiltinAlarms();
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -2310,6 +2350,183 @@ function startAffirmTransition() {
     if (ctx) setTimeout(function(){ try { ctx.close(); } catch(e){} }, 200);
     sleepPhase = 'sleeping';
   }, ramp * 1000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUILT-IN ALARM TONES
+// ══════════════════════════════════════════════════════════════
+const BUILTIN_ALARMS = [
+  { id:'beep',     emoji:'🔔', name:'Classic Beep',  desc:'Double beep at 880 Hz' },
+  { id:'siren',    emoji:'🚨', name:'Siren',          desc:'Rising & falling sweep' },
+  { id:'buzzer',   emoji:'📢', name:'Buzzer',         desc:'Harsh sawtooth bursts' },
+  { id:'chirp',    emoji:'🐦', name:'Chirp',          desc:'Rapid ascending trills' },
+  { id:'foghorn',  emoji:'📯', name:'Foghorn',        desc:'Low descending blasts' },
+  { id:'reveille', emoji:'🎺', name:'Reveille',       desc:'Military bugle call' }
+];
+
+function renderBuiltinAlarms() {
+  var grid = document.getElementById('builtinAlarmGrid');
+  if (!grid) return;
+  grid.innerHTML = BUILTIN_ALARMS.map(function(a) {
+    var sel = builtinAlarmId === a.id;
+    var prev = builtinPreviewRunning && builtinAlarmId === a.id;
+    var cls = 'alarm-card' + (sel ? ' selected' : '') + (prev ? ' previewing' : '');
+    return '<button class="' + cls + '" onclick="toggleBuiltinAlarm('' + a.id + '')">'
+      + '<span class="alarm-em">' + a.emoji + '</span>'
+      + '<div class="alarm-nm">' + a.name + '</div>'
+      + '</button>';
+  }).join('');
+}
+
+function toggleBuiltinAlarm(id) {
+  if (builtinAlarmId === id && builtinPreviewRunning) {
+    stopBuiltinPreview();
+    renderBuiltinAlarms();
+    return;
+  }
+  stopBuiltinPreview();
+  builtinAlarmId = id;
+  // Start preview
+  builtinPreviewCtx = new (window.AudioContext || window.webkitAudioContext)();
+  var previewGain = builtinPreviewCtx.createGain();
+  previewGain.gain.value = 0.6;
+  previewGain.connect(builtinPreviewCtx.destination);
+  builtinPreviewRunning = true;
+  runBuiltinCycle(builtinPreviewCtx, previewGain, function(){ return builtinPreviewRunning; }, function(t){
+    builtinPreviewTimer = t;
+  });
+  renderBuiltinAlarms();
+}
+
+function stopBuiltinPreview() {
+  builtinPreviewRunning = false;
+  if (builtinPreviewTimer) { clearTimeout(builtinPreviewTimer); builtinPreviewTimer = null; }
+  if (builtinPreviewCtx) {
+    try { builtinPreviewCtx.close(); } catch(e){}
+    builtinPreviewCtx = null;
+  }
+}
+
+function startBuiltinAlarmSynth(ctx, dst) {
+  builtinAlarmRunning = true;
+  runBuiltinCycle(ctx, dst, function(){ return builtinAlarmRunning; }, function(t){
+    builtinAlarmTimer = t;
+  });
+}
+
+function stopBuiltinAlarm() {
+  builtinAlarmRunning = false;
+  if (builtinAlarmTimer) { clearTimeout(builtinAlarmTimer); builtinAlarmTimer = null; }
+}
+
+function runBuiltinCycle(ctx, dst, isRunning, setTimer) {
+  if (!isRunning() || !ctx || ctx.state === 'closed') return;
+  var id = builtinAlarmId || 'beep';
+  var interval = playSoundCycle(id, ctx, dst);
+  setTimer(setTimeout(function(){ runBuiltinCycle(ctx, dst, isRunning, setTimer); }, interval));
+}
+
+function playSoundCycle(id, ctx, dst) {
+  var now = ctx.currentTime;
+  if (id === 'beep') {
+    // Classic double beep — 880 Hz square, two pulses
+    [0, 0.32].forEach(function(off) {
+      var osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 880;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0, now+off);
+      g.gain.linearRampToValueAtTime(1, now+off+0.012);
+      g.gain.setValueAtTime(1, now+off+0.18);
+      g.gain.linearRampToValueAtTime(0, now+off+0.22);
+      osc.connect(g).connect(dst); osc.start(now+off); osc.stop(now+off+0.25);
+    });
+    return 1300;
+
+  } else if (id === 'siren') {
+    // Wailing siren — 350→1200→350 Hz sawtooth over 3 s
+    var osc = ctx.createOscillator(); osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(350, now);
+    osc.frequency.linearRampToValueAtTime(1200, now+1.5);
+    osc.frequency.linearRampToValueAtTime(350, now+3.0);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.7, now+0.1);
+    g.gain.setValueAtTime(0.7, now+2.85);
+    g.gain.linearRampToValueAtTime(0, now+3.05);
+    osc.connect(g).connect(dst); osc.start(now); osc.stop(now+3.1);
+    return 3150;
+
+  } else if (id === 'buzzer') {
+    // Four harsh sawtooth bursts with octave
+    [0, 0.38, 0.76, 1.14].forEach(function(off) {
+      var o1 = ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=160;
+      var o2 = ctx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=320;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0, now+off);
+      g.gain.linearRampToValueAtTime(0.65, now+off+0.02);
+      g.gain.setValueAtTime(0.65, now+off+0.27);
+      g.gain.linearRampToValueAtTime(0, now+off+0.32);
+      o1.connect(g).connect(dst); o2.connect(g);
+      o1.start(now+off); o1.stop(now+off+0.35);
+      o2.start(now+off); o2.stop(now+off+0.35);
+    });
+    return 2400;
+
+  } else if (id === 'chirp') {
+    // Three ascending chirp sweeps 900→2800 Hz
+    for (var i = 0; i < 3; i++) {
+      (function(i) {
+        var t = now + i * 0.38;
+        var osc = ctx.createOscillator(); osc.type='triangle';
+        osc.frequency.setValueAtTime(900, t);
+        osc.frequency.exponentialRampToValueAtTime(2800, t+0.16);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.85, t+0.02);
+        g.gain.setValueAtTime(0.85, t+0.13);
+        g.gain.linearRampToValueAtTime(0, t+0.19);
+        osc.connect(g).connect(dst); osc.start(t); osc.stop(t+0.22);
+      })(i);
+    }
+    return 1800;
+
+  } else if (id === 'foghorn') {
+    // Low descending blast 200→70 Hz with lowpass warmth
+    var osc = ctx.createOscillator(); osc.type='sawtooth';
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(70, now+2.2);
+    var filt = ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=550;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.85, now+0.18);
+    g.gain.setValueAtTime(0.85, now+1.9);
+    g.gain.linearRampToValueAtTime(0, now+2.3);
+    osc.connect(filt).connect(g).connect(dst); osc.start(now); osc.stop(now+2.4);
+    return 3800;
+
+  } else if (id === 'reveille') {
+    // Military bugle call: G4 E4 C4 E4 G4 G4 G4 (triangle approximates brass)
+    var notes = [
+      {f:392,t:0,   d:0.22},{f:330,t:0.28,d:0.18},{f:262,t:0.52,d:0.28},
+      {f:330,t:0.88,d:0.18},{f:392,t:1.12,d:0.22},{f:392,t:1.40,d:0.30},
+      {f:392,t:1.78,d:0.50}
+    ];
+    notes.forEach(function(n) {
+      var osc = ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=n.f;
+      // Add a slight sawtooth blend for brass character
+      var osc2 = ctx.createOscillator(); osc2.type='sawtooth'; osc2.frequency.value=n.f;
+      var g2 = ctx.createGain(); g2.gain.value=0.15;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0, now+n.t);
+      g.gain.linearRampToValueAtTime(0.7, now+n.t+0.025);
+      g.gain.setValueAtTime(0.7, now+n.t+n.d-0.04);
+      g.gain.linearRampToValueAtTime(0, now+n.t+n.d);
+      osc.connect(g).connect(dst); osc2.connect(g2).connect(g);
+      osc.start(now+n.t); osc.stop(now+n.t+n.d+0.05);
+      osc2.start(now+n.t); osc2.stop(now+n.t+n.d+0.05);
+    });
+    return 4000;
+  }
+  return 1500;
 }
 </script>
 
