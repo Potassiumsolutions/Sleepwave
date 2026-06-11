@@ -253,6 +253,25 @@ body::before{
 .main::-webkit-scrollbar{width:4px}
 .main::-webkit-scrollbar-track{background:transparent}
 .main::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* FREQ TONES ICON GRID */
+.freq-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-bottom:20px}
+.freq-card{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
+  padding:20px 10px 16px;text-align:center;cursor:pointer;
+  transition:border-color .25s,box-shadow .25s;position:relative;
+  width:100%;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;
+  outline:none;
+}
+.freq-card.playing{box-shadow:0 0 18px var(--fcol)}
+.freq-sym{font-size:2.4rem;line-height:1;margin-bottom:10px;display:block}
+.freq-hz{font-family:'DM Serif Display',serif;font-size:1rem;margin-bottom:4px;display:block}
+.freq-lbl{font-size:.64rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block}
+.freq-dot{
+  position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;
+  animation:pulse 1.5s ease infinite;display:none;
+}
+.freq-card.playing .freq-dot{display:block}
 </style>
 </head>
 <body>
@@ -527,9 +546,8 @@ body::before{
 
     <div class="card">
       <div class="card-title">Healing Frequency Tones</div>
-      <div style="font-size:.78rem;color:var(--text2);line-height:1.5;margin-bottom:12px">
-        Sustained tones tuned to specific frequencies — for meditation, focus, and relaxation.
-        Each uses layered harmonics and a gentle shimmer for a rich, continuous sound.
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:12px">
+        Tap a tone to play — tap again to stop. Only one plays at a time.
       </div>
       <div class="slider-row">
         <label>Volume</label>
@@ -538,7 +556,7 @@ body::before{
       </div>
     </div>
 
-    <div id="freqPresetList"></div>
+    <div class="freq-grid" id="freqPresetList"></div>
 
   </div>
 
@@ -1641,94 +1659,48 @@ renderHistory();
 // HEALING FREQUENCY ENGINE
 // ═══════════════════════════════════════════
 const FREQ_PRESETS = [
-  {
-    id: 'hz888', hz: 888, name: '888 Hz', label: 'Abundance & Flow',
-    desc: 'Associated with infinite abundance and manifestation. A rich, resonant tone that many use for intention-setting and meditation.',
-    color: '#a78bfa'
-  },
-  {
-    id: 'hz999_golden', hz: 999, name: '9 · 99 · 999 Hz', label: 'Infinite Healing Golden Wave',
-    desc: 'Triple-layer tone: 999 Hz clarity, 99 Hz deep bass foundation, and a 9 Hz rhythmic pulse modulating the whole — creating the "golden wave" pulsing quality.',
-    color: '#fbbf24', variant: 'golden'
-  },
-  {
-    id: 'hz432_butterfly', hz: 432, name: '432 Hz ✦', label: 'Butterfly Effect — Aura Cleanse',
-    desc: 'Ethereal 432 Hz with harmonic overtones and a gentle 4 Hz flutter LFO — giving it an airy, ascending quality distinct from the grounded Natural Tuning tone.',
-    color: '#67e8f9', variant: 'butterfly'
-  },
-  {
-    id: 'hz528', hz: 528, name: '528 Hz', label: 'Solfeggio: Transformation',
-    desc: 'Known as the "miracle tone" — the middle solfeggio frequency, linked to positive transformation and renewal.',
-    color: '#6c8eff'
-  },
-  {
-    id: 'hz432', hz: 432, name: '432 Hz', label: 'Natural Tuning',
-    desc: 'Tuned to the natural resonance of the universe. Warm and grounding — many find it more relaxing than standard 440 Hz tuning.',
-    color: '#4ade80'
-  },
-  {
-    id: 'hz639', hz: 639, name: '639 Hz', label: 'Heart Connection',
-    desc: 'Solfeggio frequency associated with harmonizing relationships, compassion, and opening the heart.',
-    color: '#fb923c'
-  },
-  {
-    id: 'hz741', hz: 741, name: '741 Hz', label: 'Intuition & Clarity',
-    desc: 'Awakens intuition and supports mental clarity. Often used for problem-solving and creative focus.',
-    color: '#f87171'
-  },
-  {
-    id: 'hz963', hz: 963, name: '963 Hz', label: 'Crown Frequency',
-    desc: 'Highest solfeggio frequency — associated with elevated consciousness and a sense of unity and peace.',
-    color: '#c4b5fd'
-  }
+  { id:'hz888',           hz:888,  name:'888 Hz',          label:'Abundance & Flow',   symbol:'∞',  color:'#a78bfa' },
+  { id:'hz999_golden',    hz:999,  name:'9 · 99 · 999 Hz', label:'Golden Wave', symbol:'☀', color:'#fbbf24', variant:'golden' },
+  { id:'hz432_butterfly', hz:432,  name:'432 Hz',          label:'Butterfly Effect',   symbol:'🦋', color:'#67e8f9', variant:'butterfly' },
+  { id:'hz528',           hz:528,  name:'528 Hz',          label:'Transformation',     symbol:'✦',  color:'#6c8eff' },
+  { id:'hz432',           hz:432,  name:'432 Hz',          label:'Natural Tuning',     symbol:'✿',  color:'#4ade80' },
+  { id:'hz639',           hz:639,  name:'639 Hz',          label:'Heart Connection',   symbol:'♡',  color:'#fb923c' },
+  { id:'hz741',           hz:741,  name:'741 Hz',          label:'Intuition',          symbol:'◉',  color:'#f87171' },
+  { id:'hz963',           hz:963,  name:'963 Hz',          label:'Crown Frequency',    symbol:'✸',  color:'#c4b5fd' }
 ];
 
 let freqAudioCtx = null;
 let freqMasterGain = null;
 let freqOscNodes = [];
 let freqNoiseSrc = null;
+let freqSparkleTimer = null;
+let freqMelodyTimer = null;
 let freqPlayingId = null;
 
 function renderFreqPresets() {
   const list = document.getElementById('freqPresetList');
   if (!list) return;
   list.innerHTML = FREQ_PRESETS.map(p => {
-    const playing = freqPlayingId === p.id;
-    return `
-    <div class="card" style="border-color:${playing ? p.color : 'var(--border)'};transition:border-color .3s">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div style="flex:1;min-width:0">
-          <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:${p.color};line-height:1;margin-bottom:3px">${p.name}</div>
-          <div style="font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:7px">${p.label}</div>
-          <div style="font-size:.78rem;color:var(--text2);line-height:1.5">${p.desc}</div>
-        </div>
-        <button class="btn btn-sm ${playing ? 'btn-danger' : 'btn-primary'}"
-          style="flex-shrink:0;min-width:62px;margin-top:2px"
-          onclick="toggleFreq('${p.id}')">
-          ${playing ? '■ Stop' : '▶ Play'}
-        </button>
-      </div>
-      ${playing ? `
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px">
-        <div class="status-dot on" style="background:${p.color};box-shadow:0 0 8px ${p.color}"></div>
-        <span style="font-size:.75rem;color:var(--text2)">Playing — ${p.hz} Hz</span>
-      </div>` : ''}
-    </div>`;
+    const on = freqPlayingId === p.id;
+    return '<button class="freq-card' + (on ? ' playing' : '') + '"'
+      + ' style="--fcol:' + p.color + ';border-color:' + (on ? p.color : 'var(--border)') + '"'
+      + ' onclick="toggleFreq(\'' + p.id + '\')">'
+      + '<div class="freq-dot" style="background:' + p.color + '"></div>'
+      + '<div class="freq-sym">' + p.symbol + '</div>'
+      + '<div class="freq-hz" style="color:' + p.color + '">' + p.name + '</div>'
+      + '<div class="freq-lbl">' + p.label + '</div>'
+      + '</button>';
   }).join('');
 }
 
 function toggleFreq(id) {
-  if (freqPlayingId === id) {
-    stopFreq();
-  } else {
-    stopFreq();
-    const preset = FREQ_PRESETS.find(p => p.id === id);
-    if (preset) startFreq(preset);
-  }
+  if (freqPlayingId === id) { stopFreq(); return; }
+  stopFreq();
+  const p = FREQ_PRESETS.find(p => p.id === id);
+  if (p) startFreq(p);
 }
 
 function freqMakeNoise(ctx, type) {
-  // type: 'brown' (deep rumble) | 'white' (airy hiss)
   const sr = ctx.sampleRate;
   const buf = ctx.createBuffer(1, sr * 2, sr);
   const data = buf.getChannelData(0);
@@ -1747,108 +1719,158 @@ function freqMakeNoise(ctx, type) {
 function startFreq(preset) {
   freqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   freqMasterGain = freqAudioCtx.createGain();
-  const targetVol = parseFloat(document.getElementById('freqVol').value) / 100;
+  const vol = parseFloat(document.getElementById('freqVol').value) / 100;
   freqMasterGain.gain.setValueAtTime(0.001, freqAudioCtx.currentTime);
-  freqMasterGain.gain.exponentialRampToValueAtTime(targetVol, freqAudioCtx.currentTime + 3);
+  freqMasterGain.gain.exponentialRampToValueAtTime(vol, freqAudioCtx.currentTime + 3);
   freqMasterGain.connect(freqAudioCtx.destination);
   freqOscNodes = [];
 
   if (preset.variant === 'golden') {
-    // ── 9 · 99 · 999 Hz Golden Wave ──────────────────────────────
-    // 999 Hz carrier: three detuned sines for chorus richness
-    [{detune: 0, gain: 0.38}, {detune: -5, gain: 0.18}, {detune: 5, gain: 0.18}].forEach(({detune, gain}) => {
-      const osc = freqAudioCtx.createOscillator();
-      osc.frequency.value = 999; osc.detune.value = detune;
-      const g = freqAudioCtx.createGain(); g.gain.value = gain;
-      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    // 999 Hz chorus routes through a pulsed bus so 9 Hz AM actually affects it
+    const mainBus = freqAudioCtx.createGain();
+    mainBus.gain.value = 1;
+    mainBus.connect(freqMasterGain);
+    // 9 Hz AM pulse — the defining rhythmic "wave"
+    const pLfo = freqAudioCtx.createOscillator(); pLfo.frequency.value = 9;
+    const pLfoG = freqAudioCtx.createGain(); pLfoG.gain.value = 0.09;
+    pLfo.connect(pLfoG); pLfoG.connect(mainBus.gain); pLfo.start(); freqOscNodes.push(pLfo);
+    // 999 Hz chorus — all feed mainBus so 9 Hz pulse applies to them
+    [{detune:0,gain:0.36},{detune:-5,gain:0.17},{detune:5,gain:0.17}].forEach(function(o) {
+      const osc = freqAudioCtx.createOscillator(); osc.frequency.value = 999; osc.detune.value = o.detune;
+      const g = freqAudioCtx.createGain(); g.gain.value = o.gain;
+      osc.connect(g).connect(mainBus); osc.start(); freqOscNodes.push(osc);
     });
-    // 99 Hz deep bass foundation
-    const bassOsc = freqAudioCtx.createOscillator();
-    bassOsc.frequency.value = 99;
-    const bassGain = freqAudioCtx.createGain(); bassGain.gain.value = 0.22;
-    bassOsc.connect(bassGain).connect(freqMasterGain); bassOsc.start(); freqOscNodes.push(bassOsc);
-    // 9 Hz AM pulse — modulates overall gain at 9 cycles/sec (the "wave" rhythm)
-    const pulseIntermediate = freqAudioCtx.createGain();
-    pulseIntermediate.gain.value = 1;
-    pulseIntermediate.connect(freqMasterGain);
-    const pulseLfo = freqAudioCtx.createOscillator();
-    pulseLfo.frequency.value = 9;
-    const pulseLfoGain = freqAudioCtx.createGain(); pulseLfoGain.gain.value = 0.07;
-    pulseLfo.connect(pulseLfoGain); pulseLfoGain.connect(pulseIntermediate.gain);
-    pulseLfo.start(); freqOscNodes.push(pulseLfo);
-    // Slow overall shimmer
-    const shimmerLfo = freqAudioCtx.createOscillator();
-    shimmerLfo.frequency.value = 0.10;
-    const shimmerGain = freqAudioCtx.createGain(); shimmerGain.gain.value = 0.05;
-    shimmerLfo.connect(shimmerGain); shimmerGain.connect(freqMasterGain.gain);
-    shimmerLfo.start(); freqOscNodes.push(shimmerLfo);
-    // Faint low-passed brown noise
+    // 99 Hz deep bass — continuous, feeds master directly (not pulsed)
+    const bass = freqAudioCtx.createOscillator(); bass.frequency.value = 99;
+    const bassG = freqAudioCtx.createGain(); bassG.gain.value = 0.22;
+    bass.connect(bassG).connect(freqMasterGain); bass.start(); freqOscNodes.push(bass);
+    // Slow shimmer
+    const sh = freqAudioCtx.createOscillator(); sh.frequency.value = 0.10;
+    const shG = freqAudioCtx.createGain(); shG.gain.value = 0.05;
+    sh.connect(shG); shG.connect(freqMasterGain.gain); sh.start(); freqOscNodes.push(sh);
+    // Brown noise
     freqNoiseSrc = freqAudioCtx.createBufferSource();
-    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown');
-    freqNoiseSrc.loop = true;
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown'); freqNoiseSrc.loop = true;
     const nf = freqAudioCtx.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 150;
     const ng = freqAudioCtx.createGain(); ng.gain.value = 0.018;
     freqNoiseSrc.connect(nf).connect(ng).connect(freqMasterGain); freqNoiseSrc.start();
 
   } else if (preset.variant === 'butterfly') {
-    // ── 432 Hz Butterfly Effect — Aura Cleanse ───────────────────
-    // Fundamental + two quiet harmonic overtones (octave + fifth)
-    [{hz: 432, gain: 0.42}, {hz: 864, gain: 0.12}, {hz: 648, gain: 0.09}].forEach(({hz, gain}) => {
-      const osc = freqAudioCtx.createOscillator();
-      osc.frequency.value = hz;
-      const g = freqAudioCtx.createGain(); g.gain.value = gain;
-      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    // ── 432 Hz Butterfly Effect — full sonic architecture ────────
+    // 1. Sub-bass anchor 35 Hz — physical grounding "womb" presence
+    const sub = freqAudioCtx.createOscillator(); sub.frequency.value = 35;
+    const subG = freqAudioCtx.createGain(); subG.gain.value = 0.10;
+    sub.connect(subG).connect(freqMasterGain); sub.start(); freqOscNodes.push(sub);
+
+    // 2. Binaural alpha pair: 432 Hz (L) + 436 Hz (R) = 4 Hz differential = alpha brainwave
+    [{hz:432,pan:-1,gain:0.17},{hz:436,pan:1,gain:0.17}].forEach(function(o) {
+      const osc = freqAudioCtx.createOscillator(); osc.frequency.value = o.hz;
+      const panner = freqAudioCtx.createStereoPanner(); panner.pan.value = o.pan;
+      const g = freqAudioCtx.createGain(); g.gain.value = o.gain;
+      osc.connect(panner).connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
     });
-    // Chorus pair — detuned sines for width and shimmer
-    [{detune: -8, gain: 0.16}, {detune: 8, gain: 0.16}].forEach(({detune, gain}) => {
-      const osc = freqAudioCtx.createOscillator();
-      osc.frequency.value = 432; osc.detune.value = detune;
-      const g = freqAudioCtx.createGain(); g.gain.value = gain;
-      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+
+    // 3. Breathing pad: oscillator cluster through lowpass whose cutoff breathes via slow LFO
+    const padFilt = freqAudioCtx.createBiquadFilter();
+    padFilt.type = 'lowpass'; padFilt.frequency.value = 500; padFilt.Q.value = 0.7;
+    padFilt.connect(freqMasterGain);
+    // LFO at 0.05 Hz = 20-second cycle, sweeps filter cutoff 150–850 Hz
+    const padLfo = freqAudioCtx.createOscillator(); padLfo.frequency.value = 0.05;
+    const padLfoG = freqAudioCtx.createGain(); padLfoG.gain.value = 350;
+    padLfo.connect(padLfoG); padLfoG.connect(padFilt.frequency); padLfo.start(); freqOscNodes.push(padLfo);
+    // Pad oscillators: fundamental + detuned chorus + octave + fifth
+    [{hz:432,d:0,g:0.27},{hz:432,d:-8,g:0.12},{hz:432,d:8,g:0.12},{hz:864,d:0,g:0.08},{hz:648,d:0,g:0.07}].forEach(function(o) {
+      const osc = freqAudioCtx.createOscillator(); osc.frequency.value = o.hz; osc.detune.value = o.d;
+      const g = freqAudioCtx.createGain(); g.gain.value = o.g;
+      osc.connect(g).connect(padFilt); osc.start(); freqOscNodes.push(osc);
     });
-    // 4 Hz flutter LFO — the "butterfly wing" tremolo, light depth so it's felt not heard
-    const flutterLfo = freqAudioCtx.createOscillator();
-    flutterLfo.frequency.value = 4;
-    const flutterGain = freqAudioCtx.createGain(); flutterGain.gain.value = 0.045;
-    flutterLfo.connect(flutterGain); flutterGain.connect(freqMasterGain.gain);
-    flutterLfo.start(); freqOscNodes.push(flutterLfo);
-    // Very slow ascending shimmer (0.06 Hz)
-    const waveLfo = freqAudioCtx.createOscillator();
-    waveLfo.frequency.value = 0.06;
-    const waveGain = freqAudioCtx.createGain(); waveGain.gain.value = 0.06;
-    waveLfo.connect(waveGain); waveGain.connect(freqMasterGain.gain);
-    waveLfo.start(); freqOscNodes.push(waveLfo);
-    // Airy high-passed white noise — light and ethereal, not deep
+    // Very slow master shimmer
+    const wLfo = freqAudioCtx.createOscillator(); wLfo.frequency.value = 0.06;
+    const wG = freqAudioCtx.createGain(); wG.gain.value = 0.05;
+    wLfo.connect(wG); wG.connect(freqMasterGain.gain); wLfo.start(); freqOscNodes.push(wLfo);
+    // Brown noise underpinning
     freqNoiseSrc = freqAudioCtx.createBufferSource();
-    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'white');
-    freqNoiseSrc.loop = true;
-    const nf = freqAudioCtx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 3000;
-    const ng = freqAudioCtx.createGain(); ng.gain.value = 0.012;
-    freqNoiseSrc.connect(nf).connect(ng).connect(freqMasterGain); freqNoiseSrc.start();
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown'); freqNoiseSrc.loop = true;
+    const bnf = freqAudioCtx.createBiquadFilter(); bnf.type = 'lowpass'; bnf.frequency.value = 200;
+    const bng = freqAudioCtx.createGain(); bng.gain.value = 0.018;
+    freqNoiseSrc.connect(bnf).connect(bng).connect(freqMasterGain); freqNoiseSrc.start();
+
+    // 4. Sparkle engine: random 4–8 kHz crystalline tinkles, ping-pong L/R autopanning
+    var sparkDir = 1;
+    function scheduleSparkle() {
+      if (freqPlayingId !== 'hz432_butterfly' || !freqAudioCtx) return;
+      var now = freqAudioCtx.currentTime;
+      var freq = 4000 + Math.random() * 4000;
+      sparkDir *= -1;
+      var pan = sparkDir * (0.3 + Math.random() * 0.6);
+      var so = freqAudioCtx.createOscillator(); so.frequency.value = freq;
+      var sg = freqAudioCtx.createGain();
+      sg.gain.setValueAtTime(0, now);
+      sg.gain.linearRampToValueAtTime(0.02, now + 0.04);
+      sg.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+      var sp = freqAudioCtx.createStereoPanner(); sp.pan.value = pan;
+      so.connect(sg).connect(sp).connect(freqMasterGain);
+      so.start(now); so.stop(now + 0.9);
+      freqSparkleTimer = setTimeout(scheduleSparkle, 500 + Math.random() * 2500);
+    }
+    scheduleSparkle();
+
+    // 5. Melodic whispers: faint pentatonic plucks with feedback delay reverb
+    // A pentatonic tuned to 432 Hz base: A4, C#5, E5, F#5, A5
+    var PENTA = [432, 540, 648, 729, 864, 972];
+    function scheduleMelody() {
+      if (freqPlayingId !== 'hz432_butterfly' || !freqAudioCtx) return;
+      var now = freqAudioCtx.currentTime;
+      var freq = PENTA[Math.floor(Math.random() * PENTA.length)];
+      var pan = (Math.random() - 0.5) * 1.4;
+      var mo = freqAudioCtx.createOscillator(); mo.frequency.value = freq;
+      var mg = freqAudioCtx.createGain();
+      mg.gain.setValueAtTime(0, now);
+      mg.gain.linearRampToValueAtTime(0.013, now + 0.08);
+      mg.gain.exponentialRampToValueAtTime(0.001, now + 4.0);
+      var mp = freqAudioCtx.createStereoPanner(); mp.pan.value = pan;
+      var del = freqAudioCtx.createDelay(1.0); del.delayTime.value = 0.28;
+      var fb = freqAudioCtx.createGain(); fb.gain.value = 0.30;
+      del.connect(fb); fb.connect(del);
+      var dOut = freqAudioCtx.createGain(); dOut.gain.value = 0.30; del.connect(dOut);
+      mo.connect(mg).connect(mp);
+      mp.connect(freqMasterGain); mp.connect(del); dOut.connect(freqMasterGain);
+      mo.start(now); mo.stop(now + 0.12);
+      freqMelodyTimer = setTimeout(scheduleMelody, 3000 + Math.random() * 9000);
+    }
+    scheduleMelody();
 
   } else {
-    // ── Default: warm chorus tone (888, 528, 432, 639, 741, 963) ─
-    const hz = preset.hz;
-    [{detune: 0, gain: 0.45}, {detune: -6, gain: 0.20}, {detune: 6, gain: 0.20}].forEach(({detune, gain}) => {
-      const osc = freqAudioCtx.createOscillator();
-      osc.frequency.value = hz; osc.detune.value = detune;
-      const g = freqAudioCtx.createGain(); g.gain.value = gain;
-      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
-    });
-    const subOsc = freqAudioCtx.createOscillator();
-    subOsc.frequency.value = hz / 2;
-    const subGain = freqAudioCtx.createGain(); subGain.gain.value = 0.13;
-    subOsc.connect(subGain).connect(freqMasterGain); subOsc.start(); freqOscNodes.push(subOsc);
-    const lfo = freqAudioCtx.createOscillator();
-    lfo.frequency.value = 0.12;
-    const lfoGain = freqAudioCtx.createGain(); lfoGain.gain.value = 0.055;
-    lfo.connect(lfoGain); lfoGain.connect(freqMasterGain.gain);
-    lfo.start(); freqOscNodes.push(lfo);
+    // ── Default warm chorus (528, 432, 639, 741, 963) ────────────
+    var hz = preset.hz;
+    if (preset.id === 'hz888') {
+      // 888 Hz binaural: L=888, R=892 → 4 Hz alpha beat
+      [{hz:888,pan:-0.85,gain:0.30},{hz:892,pan:0.85,gain:0.30}].forEach(function(o) {
+        var osc = freqAudioCtx.createOscillator(); osc.frequency.value = o.hz;
+        var panner = freqAudioCtx.createStereoPanner(); panner.pan.value = o.pan;
+        var g = freqAudioCtx.createGain(); g.gain.value = o.gain;
+        osc.connect(panner).connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+      });
+      var sub888 = freqAudioCtx.createOscillator(); sub888.frequency.value = 444;
+      var sub888G = freqAudioCtx.createGain(); sub888G.gain.value = 0.12;
+      sub888.connect(sub888G).connect(freqMasterGain); sub888.start(); freqOscNodes.push(sub888);
+    } else {
+      [{detune:0,gain:0.45},{detune:-6,gain:0.20},{detune:6,gain:0.20}].forEach(function(o) {
+        var osc = freqAudioCtx.createOscillator(); osc.frequency.value = hz; osc.detune.value = o.detune;
+        var g = freqAudioCtx.createGain(); g.gain.value = o.gain;
+        osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+      });
+      var subDef = freqAudioCtx.createOscillator(); subDef.frequency.value = hz / 2;
+      var subDefG = freqAudioCtx.createGain(); subDefG.gain.value = 0.13;
+      subDef.connect(subDefG).connect(freqMasterGain); subDef.start(); freqOscNodes.push(subDef);
+    }
+    var lfo = freqAudioCtx.createOscillator(); lfo.frequency.value = 0.12;
+    var lfoG = freqAudioCtx.createGain(); lfoG.gain.value = 0.055;
+    lfo.connect(lfoG); lfoG.connect(freqMasterGain.gain); lfo.start(); freqOscNodes.push(lfo);
     freqNoiseSrc = freqAudioCtx.createBufferSource();
-    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown');
-    freqNoiseSrc.loop = true;
-    const noiseFilt = freqAudioCtx.createBiquadFilter(); noiseFilt.type = 'lowpass'; noiseFilt.frequency.value = 160;
-    const noiseGain = freqAudioCtx.createGain(); noiseGain.gain.value = 0.022;
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown'); freqNoiseSrc.loop = true;
+    var noiseFilt = freqAudioCtx.createBiquadFilter(); noiseFilt.type = 'lowpass'; noiseFilt.frequency.value = 160;
+    var noiseGain = freqAudioCtx.createGain(); noiseGain.gain.value = 0.022;
     freqNoiseSrc.connect(noiseFilt).connect(noiseGain).connect(freqMasterGain); freqNoiseSrc.start();
   }
 
@@ -1857,24 +1879,27 @@ function startFreq(preset) {
 }
 
 function stopFreq() {
+  if (freqSparkleTimer) { clearTimeout(freqSparkleTimer); freqSparkleTimer = null; }
+  if (freqMelodyTimer)  { clearTimeout(freqMelodyTimer);  freqMelodyTimer  = null; }
   if (!freqAudioCtx) { freqPlayingId = null; renderFreqPresets(); return; }
   freqMasterGain.gain.setTargetAtTime(0, freqAudioCtx.currentTime, 0.4);
-  const ctxToClose = freqAudioCtx;
-  freqAudioCtx = null;
-  freqMasterGain = null;
-  freqOscNodes = [];
-  freqNoiseSrc = null;
-  freqPlayingId = null;
+  var ctx = freqAudioCtx;
+  freqAudioCtx = null; freqMasterGain = null; freqOscNodes = []; freqNoiseSrc = null; freqPlayingId = null;
   renderFreqPresets();
-  setTimeout(() => ctxToClose.close(), 1200);
+  setTimeout(function() { ctx.close(); }, 1200);
 }
 
 function updateFreqVol(el) {
   document.getElementById('freqVolVal').textContent = el.value + '%';
   if (freqMasterGain && freqAudioCtx) {
-    freqMasterGain.gain.setTargetAtTime(el.value / 100, freqAudioCtx.currentTime, 0.05);
+    var now = freqAudioCtx.currentTime;
+    var v = parseFloat(el.value) / 100;
+    freqMasterGain.gain.cancelScheduledValues(now);
+    freqMasterGain.gain.setValueAtTime(freqMasterGain.gain.value, now);
+    freqMasterGain.gain.linearRampToValueAtTime(v, now + 0.1);
   }
 }
+
 </script>
 
 <!-- Update banner -->
