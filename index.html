@@ -1647,6 +1647,16 @@ const FREQ_PRESETS = [
     color: '#a78bfa'
   },
   {
+    id: 'hz999_golden', hz: 999, name: '9 · 99 · 999 Hz', label: 'Infinite Healing Golden Wave',
+    desc: 'Triple-layer tone: 999 Hz clarity, 99 Hz deep bass foundation, and a 9 Hz rhythmic pulse modulating the whole — creating the "golden wave" pulsing quality.',
+    color: '#fbbf24', variant: 'golden'
+  },
+  {
+    id: 'hz432_butterfly', hz: 432, name: '432 Hz ✦', label: 'Butterfly Effect — Aura Cleanse',
+    desc: 'Ethereal 432 Hz with harmonic overtones and a gentle 4 Hz flutter LFO — giving it an airy, ascending quality distinct from the grounded Natural Tuning tone.',
+    color: '#67e8f9', variant: 'butterfly'
+  },
+  {
     id: 'hz528', hz: 528, name: '528 Hz', label: 'Solfeggio: Transformation',
     desc: 'Known as the "miracle tone" — the middle solfeggio frequency, linked to positive transformation and renewal.',
     color: '#6c8eff'
@@ -1717,71 +1727,130 @@ function toggleFreq(id) {
   }
 }
 
+function freqMakeNoise(ctx, type) {
+  // type: 'brown' (deep rumble) | 'white' (airy hiss)
+  const sr = ctx.sampleRate;
+  const buf = ctx.createBuffer(1, sr * 2, sr);
+  const data = buf.getChannelData(0);
+  if (type === 'brown') {
+    let last = 0;
+    for (let i = 0; i < sr * 2; i++) {
+      last = (last + (Math.random() * 2 - 1) * 0.02) * 0.998;
+      data[i] = last * 3.5;
+    }
+  } else {
+    for (let i = 0; i < sr * 2; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return buf;
+}
+
 function startFreq(preset) {
   freqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   freqMasterGain = freqAudioCtx.createGain();
   const targetVol = parseFloat(document.getElementById('freqVol').value) / 100;
-  // Fade in over 3 seconds
   freqMasterGain.gain.setValueAtTime(0.001, freqAudioCtx.currentTime);
   freqMasterGain.gain.exponentialRampToValueAtTime(targetVol, freqAudioCtx.currentTime + 3);
   freqMasterGain.connect(freqAudioCtx.destination);
-
   freqOscNodes = [];
-  const hz = preset.hz;
 
-  // Three slightly detuned sines — gives a warm chorus/beating quality
-  [{detune: 0, gain: 0.45}, {detune: -6, gain: 0.20}, {detune: 6, gain: 0.20}].forEach(({detune, gain}) => {
-    const osc = freqAudioCtx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = hz;
-    osc.detune.value = detune;
-    const g = freqAudioCtx.createGain();
-    g.gain.value = gain;
-    osc.connect(g).connect(freqMasterGain);
-    osc.start();
-    freqOscNodes.push(osc);
-  });
+  if (preset.variant === 'golden') {
+    // ── 9 · 99 · 999 Hz Golden Wave ──────────────────────────────
+    // 999 Hz carrier: three detuned sines for chorus richness
+    [{detune: 0, gain: 0.38}, {detune: -5, gain: 0.18}, {detune: 5, gain: 0.18}].forEach(({detune, gain}) => {
+      const osc = freqAudioCtx.createOscillator();
+      osc.frequency.value = 999; osc.detune.value = detune;
+      const g = freqAudioCtx.createGain(); g.gain.value = gain;
+      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    });
+    // 99 Hz deep bass foundation
+    const bassOsc = freqAudioCtx.createOscillator();
+    bassOsc.frequency.value = 99;
+    const bassGain = freqAudioCtx.createGain(); bassGain.gain.value = 0.22;
+    bassOsc.connect(bassGain).connect(freqMasterGain); bassOsc.start(); freqOscNodes.push(bassOsc);
+    // 9 Hz AM pulse — modulates overall gain at 9 cycles/sec (the "wave" rhythm)
+    const pulseIntermediate = freqAudioCtx.createGain();
+    pulseIntermediate.gain.value = 1;
+    pulseIntermediate.connect(freqMasterGain);
+    const pulseLfo = freqAudioCtx.createOscillator();
+    pulseLfo.frequency.value = 9;
+    const pulseLfoGain = freqAudioCtx.createGain(); pulseLfoGain.gain.value = 0.07;
+    pulseLfo.connect(pulseLfoGain); pulseLfoGain.connect(pulseIntermediate.gain);
+    pulseLfo.start(); freqOscNodes.push(pulseLfo);
+    // Slow overall shimmer
+    const shimmerLfo = freqAudioCtx.createOscillator();
+    shimmerLfo.frequency.value = 0.10;
+    const shimmerGain = freqAudioCtx.createGain(); shimmerGain.gain.value = 0.05;
+    shimmerLfo.connect(shimmerGain); shimmerGain.connect(freqMasterGain.gain);
+    shimmerLfo.start(); freqOscNodes.push(shimmerLfo);
+    // Faint low-passed brown noise
+    freqNoiseSrc = freqAudioCtx.createBufferSource();
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown');
+    freqNoiseSrc.loop = true;
+    const nf = freqAudioCtx.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 150;
+    const ng = freqAudioCtx.createGain(); ng.gain.value = 0.018;
+    freqNoiseSrc.connect(nf).connect(ng).connect(freqMasterGain); freqNoiseSrc.start();
 
-  // Soft octave-below sub-harmonic for body and warmth
-  const subOsc = freqAudioCtx.createOscillator();
-  subOsc.type = 'sine';
-  subOsc.frequency.value = hz / 2;
-  const subGain = freqAudioCtx.createGain();
-  subGain.gain.value = 0.13;
-  subOsc.connect(subGain).connect(freqMasterGain);
-  subOsc.start();
-  freqOscNodes.push(subOsc);
+  } else if (preset.variant === 'butterfly') {
+    // ── 432 Hz Butterfly Effect — Aura Cleanse ───────────────────
+    // Fundamental + two quiet harmonic overtones (octave + fifth)
+    [{hz: 432, gain: 0.42}, {hz: 864, gain: 0.12}, {hz: 648, gain: 0.09}].forEach(({hz, gain}) => {
+      const osc = freqAudioCtx.createOscillator();
+      osc.frequency.value = hz;
+      const g = freqAudioCtx.createGain(); g.gain.value = gain;
+      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    });
+    // Chorus pair — detuned sines for width and shimmer
+    [{detune: -8, gain: 0.16}, {detune: 8, gain: 0.16}].forEach(({detune, gain}) => {
+      const osc = freqAudioCtx.createOscillator();
+      osc.frequency.value = 432; osc.detune.value = detune;
+      const g = freqAudioCtx.createGain(); g.gain.value = gain;
+      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    });
+    // 4 Hz flutter LFO — the "butterfly wing" tremolo, light depth so it's felt not heard
+    const flutterLfo = freqAudioCtx.createOscillator();
+    flutterLfo.frequency.value = 4;
+    const flutterGain = freqAudioCtx.createGain(); flutterGain.gain.value = 0.045;
+    flutterLfo.connect(flutterGain); flutterGain.connect(freqMasterGain.gain);
+    flutterLfo.start(); freqOscNodes.push(flutterLfo);
+    // Very slow ascending shimmer (0.06 Hz)
+    const waveLfo = freqAudioCtx.createOscillator();
+    waveLfo.frequency.value = 0.06;
+    const waveGain = freqAudioCtx.createGain(); waveGain.gain.value = 0.06;
+    waveLfo.connect(waveGain); waveGain.connect(freqMasterGain.gain);
+    waveLfo.start(); freqOscNodes.push(waveLfo);
+    // Airy high-passed white noise — light and ethereal, not deep
+    freqNoiseSrc = freqAudioCtx.createBufferSource();
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'white');
+    freqNoiseSrc.loop = true;
+    const nf = freqAudioCtx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 3000;
+    const ng = freqAudioCtx.createGain(); ng.gain.value = 0.012;
+    freqNoiseSrc.connect(nf).connect(ng).connect(freqMasterGain); freqNoiseSrc.start();
 
-  // Very slow shimmer (0.12 Hz tremolo) — creates the breathing, alive quality
-  const lfo = freqAudioCtx.createOscillator();
-  lfo.type = 'sine';
-  lfo.frequency.value = 0.12;
-  const lfoGain = freqAudioCtx.createGain();
-  lfoGain.gain.value = 0.055;
-  lfo.connect(lfoGain);
-  lfoGain.connect(freqMasterGain.gain);
-  lfo.start();
-  freqOscNodes.push(lfo);
-
-  // Faint low-passed brown noise bed — adds depth without distraction
-  const sr = freqAudioCtx.sampleRate;
-  const buf = freqAudioCtx.createBuffer(1, sr * 2, sr);
-  const data = buf.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < sr * 2; i++) {
-    last = (last + (Math.random() * 2 - 1) * 0.02) * 0.998;
-    data[i] = last * 3.5;
+  } else {
+    // ── Default: warm chorus tone (888, 528, 432, 639, 741, 963) ─
+    const hz = preset.hz;
+    [{detune: 0, gain: 0.45}, {detune: -6, gain: 0.20}, {detune: 6, gain: 0.20}].forEach(({detune, gain}) => {
+      const osc = freqAudioCtx.createOscillator();
+      osc.frequency.value = hz; osc.detune.value = detune;
+      const g = freqAudioCtx.createGain(); g.gain.value = gain;
+      osc.connect(g).connect(freqMasterGain); osc.start(); freqOscNodes.push(osc);
+    });
+    const subOsc = freqAudioCtx.createOscillator();
+    subOsc.frequency.value = hz / 2;
+    const subGain = freqAudioCtx.createGain(); subGain.gain.value = 0.13;
+    subOsc.connect(subGain).connect(freqMasterGain); subOsc.start(); freqOscNodes.push(subOsc);
+    const lfo = freqAudioCtx.createOscillator();
+    lfo.frequency.value = 0.12;
+    const lfoGain = freqAudioCtx.createGain(); lfoGain.gain.value = 0.055;
+    lfo.connect(lfoGain); lfoGain.connect(freqMasterGain.gain);
+    lfo.start(); freqOscNodes.push(lfo);
+    freqNoiseSrc = freqAudioCtx.createBufferSource();
+    freqNoiseSrc.buffer = freqMakeNoise(freqAudioCtx, 'brown');
+    freqNoiseSrc.loop = true;
+    const noiseFilt = freqAudioCtx.createBiquadFilter(); noiseFilt.type = 'lowpass'; noiseFilt.frequency.value = 160;
+    const noiseGain = freqAudioCtx.createGain(); noiseGain.gain.value = 0.022;
+    freqNoiseSrc.connect(noiseFilt).connect(noiseGain).connect(freqMasterGain); freqNoiseSrc.start();
   }
-  freqNoiseSrc = freqAudioCtx.createBufferSource();
-  freqNoiseSrc.buffer = buf;
-  freqNoiseSrc.loop = true;
-  const noiseFilt = freqAudioCtx.createBiquadFilter();
-  noiseFilt.type = 'lowpass';
-  noiseFilt.frequency.value = 160;
-  const noiseGain = freqAudioCtx.createGain();
-  noiseGain.gain.value = 0.022;
-  freqNoiseSrc.connect(noiseFilt).connect(noiseGain).connect(freqMasterGain);
-  freqNoiseSrc.start();
 
   freqPlayingId = preset.id;
   renderFreqPresets();
