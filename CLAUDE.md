@@ -1,7 +1,7 @@
-# SleepWave 6 — Claude Onboarding
+# SleepWave — Claude Onboarding
 
 ## Project Overview
-A Progressive Web App (PWA) for sleep improvement and gentle waking, built for the Build with Gemini xPrize competition. Synthesizes binaural beats + ambient noise, provides a smart alarm with audio crossfade, logs sleep sessions, and supports custom sleep audio files.
+A Progressive Web App (PWA) for sleep improvement and gentle waking, built for the Build with Gemini xPrize competition. Synthesizes binaural beats + ambient noise, provides a smart alarm with audio crossfade, logs sleep sessions, supports custom sleep audio files, and plays healing-frequency tone presets.
 
 **Single-file architecture** — the entire app lives in `index.html` (CSS + JS embedded). No build step, no framework. Open directly in a browser or install as a PWA.
 
@@ -16,7 +16,7 @@ A Progressive Web App (PWA) for sleep improvement and gentle waking, built for t
 
 **To push an update:**
 ```powershell
-cd "C:\Claude\Sleepwave 6"
+cd "D:\Claude\Sleepwave"
 git add index.html sw.js   # add any other changed files
 git commit -m "describe what changed"
 git push
@@ -29,7 +29,7 @@ Users already running the app will see a purple **"✦ New version available —
 
 | File | Purpose |
 |---|---|
-| `index.html` | Complete app — all CSS, HTML, JS (~1650 lines) |
+| `index.html` | Complete app — all CSS, HTML, JS (~2050 lines) |
 | `manifest.json` | PWA manifest (name, icons, start URL, display mode) |
 | `sw.js` | Service Worker — cache-first, version `sleepwave-v2`, shows update banner |
 | `CLAUDE.md` | This file — onboarding context for Claude sessions |
@@ -44,7 +44,8 @@ Users already running the app will see a purple **"✦ New version available —
 1. **Sleep** — Sleep Audio Source toggle (Synth / Custom File) → Binaural engine + ambient mixer (Synth mode) or file picker (Custom File mode) → Master Volume → Start/Stop button → Audio Status → Settings Presets
 2. **Wake** — Wake audio source: microphone recording / file upload / AI script
 3. **Alarm** — Alarm time input, arm/disarm, countdown, test wake sequence, alarm volume
-4. **History** — Sleep session log rendered from localStorage, clear button
+4. **Tones** — Icon grid of healing-frequency presets; tap to play/stop; volume slider; fades out with alarm crossfade
+5. **History** — Sleep session log rendered from localStorage, clear button
 
 ### Key Global State Variables
 ```
@@ -55,7 +56,7 @@ sleepStartTime      — Date, set when sleep audio starts
 alarmFireTime       — Date, set when alarm fires
 pendingSessionStart — Date, captured at manual stop for the save-prompt flow
 pendingSessionStop  — Date, captured at manual stop for the save-prompt flow
-audioCtx            — Web Audio API context
+audioCtx            — Web Audio API context (sleep engine)
 masterGain          — top-level gain (controls master vol; sole gain in file mode)
 binauralGain        — gain for binaural oscillators (synth mode only)
 ambientMaster       — gain for all noise sources (synth mode only)
@@ -64,6 +65,13 @@ leftOsc, rightOsc   — binaural oscillators (synth mode only)
 sleepFileBlob       — File object for custom sleep audio (file mode)
 sleepFileAudio      — Audio element playing the custom file
 sleepFileSource     — MediaElementSourceNode routing file through Web Audio
+freqAudioCtx        — Separate AudioContext for Tones tab
+freqMasterGain      — Master gain for active tone preset
+freqOscNodes        — Array of oscillators in active tone preset (for cleanup)
+freqNoiseSrc        — Noise buffer source in active tone preset
+freqSparkleTimer    — setTimeout handle for sparkle scheduler
+freqMelodyTimer     — setTimeout handle for melody scheduler
+freqPlayingId       — ID string of currently playing preset, or null
 ```
 
 ### Key Functions
@@ -81,17 +89,22 @@ sleepFileSource     — MediaElementSourceNode routing file through Web Audio
 | `loadPreset()` | Applies the selected preset from the dropdown |
 | `deletePreset()` | Removes a preset after confirmation |
 | `renderPresetSelect(selected)` | Rebuilds the preset dropdown from localStorage |
-| `applySettings(s)` | Applies a settings object to all UI controls |
+| `applySettings(s)` | Applies a settings object to all UI controls AND live audio nodes |
 | `loadSettings()` | On page load: migrates legacy key, populates dropdown, auto-loads last preset |
 | `armAlarm()` | Arms alarm, starts 20s interval check, pre-loads wake audio |
 | `checkAlarm()` | Compares current time to alarm time (90s window) |
 | `fireAlarm()` | Sets alarmFireTime, shows wake overlay, starts crossfade |
-| `dismissAlarm()` | Hides overlay, restores gains, logs session to history |
-| `startWakeCrossfade()` | Fades out sleep audio (synth gains OR masterGain in file mode) |
+| `dismissAlarm()` | Hides overlay, restores gains, stops tone preset, logs session |
+| `startWakeCrossfade()` | Fades out sleep audio AND active tone preset over ramp time |
 | `logHistory(start, alarmTime, dismiss, totalMs)` | Pushes session to sw_history (max 30); alarmTime may be null |
 | `renderHistory()` | Renders session cards; hides Alarm Fired row when alarmTime is null |
 | `applyUpdate()` | Sends SKIP_WAITING to new SW and reloads page |
 | `switchTab(name)` | Tab navigation |
+| `startFreq(preset)` | Starts a tone preset — builds synthesis graph, fades in |
+| `stopFreq()` | Stops active tone preset — cancels timers, fades out, closes context |
+| `renderFreqPresets()` | Re-renders Tones icon grid with playing state |
+| `updateFreqVol(el)` | Updates freqMasterGain from the Tones volume slider |
+| `freqMakeNoise(ctx, type)` | Generates brown or white noise buffer |
 
 ### Audio Graph — Synth Mode
 ```
@@ -108,6 +121,30 @@ rainSrc  ─┘
 sleepFileBlob ─► Audio element ─► MediaElementSource ─► masterGain ─► destination
 ```
 
+### Audio Graph — Tones Tab (separate AudioContext)
+```
+[oscillators / noise] ─► [variant-specific FX chain] ─► freqMasterGain ─► destination
+```
+Alarm crossfade fades `freqMasterGain` to 0 over the same ramp time as the sleep audio fade.
+
+---
+
+## Tones Presets (FREQ_PRESETS)
+
+| ID | Hz | Symbol | Label | Variant |
+|---|---|---|---|---|
+| hz888 | 888 | ∞ | Abundance & Flow | (default chorus) |
+| hz999_golden | 999 | ☀ | Golden Wave | golden |
+| hz432_butterfly | 432 | 🦋 | Butterfly Effect | butterfly |
+| hz528 | 528 | ✦ | Transformation | (default chorus) |
+| hz432 | 432 | ✿ | Natural Tuning | (default chorus) |
+| hz639 | 639 | ♡ | Heart Connection | (default chorus) |
+| hz741 | 741 | ◉ | Intuition | (default chorus) |
+| hz963 | 963 | ✸ | Crown Frequency | (default chorus) |
+| hz432_drone | 432 | ◎ | Analog Drone | drone432 |
+
+Layout: 2-column icon grid. 9th card (odd count) is centered via `grid-column:1/-1`.
+
 ---
 
 ## Data Persistence (localStorage)
@@ -119,17 +156,6 @@ sleepFileBlob ─► Audio element ─► MediaElementSource ─► masterGain �
 | `sw_history` | JSON array | Sleep session log, max 30 entries |
 | `sw_presets` | JSON object | Named settings presets `{ "Name": { ...values } }` |
 | `sw_last_preset` | string | Name of last saved/loaded preset (auto-restored on load) |
-
-### Session Object Shape
-```javascript
-{
-  date: "5/26/2026",
-  startTime: "10:45 PM",
-  alarmTime: "11:12 PM",   // null when no alarm used (manual stop)
-  dismissTime: "11:15 PM", // labeled "Stopped" in UI when alarmTime is null
-  totalMs: 1800000
-}
-```
 
 ### Preset Object Shape
 ```javascript
@@ -148,29 +174,21 @@ sleepFileBlob ─► Audio element ─► MediaElementSource ─► masterGain �
 
 ---
 
-## Sleep Logging Behavior
-- **Alarm path:** `dismissAlarm()` always logs — no prompt, dismiss is the explicit action. `alarmTime` is set, label reads "Dismissed".
-- **Manual stop path:** `toggleSleep()` else-branch captures `stopTime`, shows `#sleepLogPrompt` overlay. User taps Save → `saveManualSession()` calls `logHistory()` with `null` alarmTime. Label reads "Stopped" in history.
-- Both paths share `logHistory()` which null-safely formats all timestamps.
+## Android / iOS Compatibility
+
+- **Wake lock:** `navigator.wakeLock` requested on sleep start; auto-re-acquired on release if still sleeping
+- **Silent keepalive:** A silent looping base64 MP3 (`iosKeepAlive`) plays on ALL platforms to prevent audio pipeline suspension overnight — not iOS-only
+- **Mic stream:** Stopped immediately after recording finishes to avoid Android entering voice-call audio mode. `getUserMedia` uses `{echoCancellation:false, noiseSuppression:false, autoGainControl:false}`
+- **Web Audio unlock:** All `AudioContext` creation is gated behind user gestures
 
 ---
 
-## Settings Presets UI (Sleep Tab)
-- **Name input + Save** — type a name, tap Save. Saves all 9 settings values.
-- **Dropdown + Load** — lists all presets alphabetically. Pick and tap Load.
-- **Delete** — removes selected preset after confirm dialog.
-- On page load, the last used preset is auto-restored.
-- Legacy `sw_settings` key (single preset) is auto-migrated to a preset named "Default" on first load.
+## File Editing Notes
 
----
-
-## Custom File Sleep Mode
-- Toggle at top of Sleep Tab: **Synth** (default) | **Custom File**
-- Switching blocked while audio is playing.
-- In Custom File mode: Binaural Engine + Ambient Mixer cards are hidden. A file picker card appears accepting any audio format (MP3, WAV, M4A, OGG).
-- File loops via `Audio` element routed through Web Audio so Master Volume slider still works.
-- Alarm crossfade works in file mode — `startWakeCrossfade()` fades `masterGain` directly.
-- After alarm dismiss, `masterGain` is restored to the Master Volume slider value.
+- **Edit tool:** Works for small changes (< ~50 lines). Unreliable for multi-KB replacements.
+- **Large replacements:** Use Node.js `fs.readFileSync`/`writeFileSync` with `{encoding:'utf8'}`, find splice points by `indexOf`, and concatenate new content.
+- **PowerShell file writes:** Always use explicit UTF-8 encoding — `[System.IO.File]::ReadAllText(path, [System.Text.Encoding]::UTF8)` and `WriteAllText(path, text, [System.Text.UTF8Encoding]::new($false))`. Default encoding is Windows-1252 and will double-encode non-ASCII characters.
+- **PowerShell 5.1 limits:** No `&&` pipeline chaining; no `utf8NoBOM` encoding name.
 
 ---
 
@@ -183,13 +201,6 @@ sleepFileBlob ─► Audio element ─► MediaElementSource ─► masterGain �
 
 ---
 
-## iOS Compatibility Notes
-- Web Audio API must be unlocked via a user gesture — `initAudio()` and `initFileAudio()` are always triggered from click handlers.
-- Wake audio element is pre-loaded during `armAlarm()` (user gesture) so `play()` works later from a timer.
-- `startIOSKeepAlive()` / `stopIOSKeepAlive()` play a silent looping base64 MP3 to prevent app suspension.
-
----
-
 ## Design System
 - **Colors:** Dark blue bg `#080b14`, accent purple/blue `#6c8eff` / `#a78bfa`, danger red `#f87171`
 - **Fonts:** DM Serif Display (headings), DM Sans (body)
@@ -197,6 +208,7 @@ sleepFileBlob ─► Audio element ─► MediaElementSource ─► masterGain �
 - Status dots: `.dot` elements, add `.on` class to light them green
 - Button classes: `.btn-primary` (gradient), `.btn-secondary` (surface), `.btn-danger` (red tint), `.btn-sm` (auto width)
 - Overlays: `position:fixed;inset:0;z-index:100+` with `.show` class toggling `display:flex`
+- Tones grid: `.freq-grid` (2-col), `.freq-card`, `.freq-card.playing` (glows with `--fcol`)
 
 ---
 
