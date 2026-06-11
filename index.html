@@ -281,8 +281,8 @@ body::before{
 <body>
 
 <div class="header">
-  <div class="logo">SleepWave âœ¦</div>
-  <div class="alarm-pill" id="alarmPill">â— Alarm Armed</div>
+  <div class="logo">SleepWave ✦</div>
+  <div class="alarm-pill" id="alarmPill">● Alarm Armed</div>
 </div>
 
 <div class="nav">
@@ -353,7 +353,7 @@ body::before{
     <div class="card" id="sleepFilePanel" style="display:none">
       <div class="card-title">Sleep Audio File</div>
       <div style="font-size:.78rem;color:var(--text2);margin-bottom:12px;line-height:1.5">
-        Upload any audio file to loop as your sleep sound â€” MP3, WAV, M4A, OGG.
+        Upload any audio file to loop as your sleep sound — MP3, WAV, M4A, OGG.
       </div>
       <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
         <span class="btn btn-secondary btn-sm" style="pointer-events:none">Choose File</span>
@@ -378,7 +378,7 @@ body::before{
     </div>
 
     <div style="display:flex;gap:8px;padding:0 0 4px">
-      <button class="btn btn-primary" id="sleepBtn" onclick="toggleSleep()">â–¶ Start Sleep Audio</button>
+      <button class="btn btn-primary" id="sleepBtn" onclick="toggleSleep()">▶ Start Sleep Audio</button>
     </div>
 
     <div class="card" id="statusCard" style="margin-top:4px">
@@ -413,7 +413,7 @@ body::before{
           style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);
                  border-radius:8px;padding:7px 10px;color:var(--text);
                  font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;cursor:pointer">
-          <option value="">â€” select preset â€”</option>
+          <option value="">— select preset —</option>
         </select>
         <button class="btn btn-secondary btn-sm" onclick="loadPreset()" style="flex-shrink:0">Load</button>
         <button class="btn btn-danger btn-sm" onclick="deletePreset()" style="flex-shrink:0">Delete</button>
@@ -445,11 +445,11 @@ body::before{
       <div id="playbackArea" style="display:none;margin-top:10px">
         <audio id="recordedAudio" controls style="width:100%;height:36px;margin-bottom:8px"></audio>
         <div class="btn-row">
-          <button class="btn btn-secondary btn-sm" onclick="reRecord()">â†º Re-record</button>
-          <button class="btn btn-primary btn-sm" id="useRecBtn" onclick="confirmRecording()">âœ“ Use This</button>
+          <button class="btn btn-secondary btn-sm" onclick="reRecord()">↺ Re-record</button>
+          <button class="btn btn-primary btn-sm" id="useRecBtn" onclick="confirmRecording()">✓ Use This</button>
         </div>
       </div>
-      <div id="recConfirmed" style="display:none;font-size:.8rem;color:var(--success);margin-top:6px">âœ“ Recording saved as wake audio</div>
+      <div id="recConfirmed" style="display:none;font-size:.8rem;color:var(--success);margin-top:6px">✓ Recording saved as wake audio</div>
     </div>
 
     <!-- File upload panel -->
@@ -482,7 +482,7 @@ body::before{
       <textarea id="aiScript" placeholder="e.g. Remind me about morning yoga at 7am..." rows="3"
         style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
                color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:10px;resize:none;outline:none;margin-bottom:8px"></textarea>
-      <button class="btn btn-primary" onclick="generateAIScript()">âœ¦ Generate Script</button>
+      <button class="btn btn-primary" onclick="generateAIScript()">✦ Generate Script</button>
       <div id="aiOutput" style="display:none;margin-top:10px;font-size:.82rem;color:var(--text2);line-height:1.5;
            background:var(--surface2);border-radius:8px;padding:10px;border:1px solid var(--border)"></div>
     </div>
@@ -506,17 +506,17 @@ body::before{
     <div class="card">
       <div class="card-title">Set Alarm</div>
       <input type="time" class="clock-input" id="alarmTime" value="07:00">
-      <div class="countdown" id="countdown">â€”</div>
+      <div class="countdown" id="countdown">—</div>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn btn-primary" id="armBtn" onclick="toggleArm()">â° Arm Alarm</button>
-        <button class="btn btn-secondary btn-sm" onclick="resetAlarm()" title="Reset alarm">â†º Reset</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetAlarm()" title="Reset alarm">↺ Reset</button>
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">Alarm Volume</div>
       <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px;line-height:1.5">
-        Independent volume for the wake audio â€” separate from sleep audio volume.
+        Independent volume for the wake audio — separate from sleep audio volume.
       </div>
       <div class="slider-row">
         <label>Wake vol</label>
@@ -530,7 +530,7 @@ body::before{
       <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px">
         Preview the crossfade: background fades out, wake audio fades in.
       </div>
-      <button class="btn btn-secondary" onclick="testWake()">â–¶ Demo Wake (5 sec)</button>
+      <button class="btn btn-secondary" onclick="testWake()">▶ Demo Wake (5 sec)</button>
     </div>
   </div>
 
@@ -599,7 +599,7 @@ body::before{
     </div>
 
     <button class="btn btn-primary" onclick="onboardGrant()" style="margin-bottom:12px;font-size:.9rem;padding:14px">
-      âœ¦ Get Started â€” Allow Microphone
+      ✦ Get Started — Allow Microphone
     </button>
     <div>
       <button onclick="onboardSkip()"
@@ -627,7 +627,7 @@ body::before{
   <div class="wake-ring">
     <div class="wake-ring-inner">Good<br>Morning</div>
   </div>
-  <div class="wake-text">Time to Rise âœ¦</div>
+  <div class="wake-text">Time to Rise ✦</div>
   <div class="wake-sub" id="wakeProgressText">Gently waking...</div>
   <button class="btn btn-primary btn-sm" onclick="dismissAlarm()">Dismiss</button>
 </div>
@@ -676,7 +676,7 @@ const BEAT_FREQS = {delta:2, theta:6, alpha:10, gamma:40};
 // so the alarm can play later even when fired from a timer.
 let iosAudioUnlocked = false;
 let iosKeepAlive = null; // silent looping audio to keep OS audio pipeline alive
-let micStream = null;   // active microphone stream â€” stopped after recording
+let micStream = null;   // active microphone stream — stopped after recording
 
 function unlockIOSAudio() {
   if (iosAudioUnlocked) return;
@@ -692,12 +692,12 @@ function unlockIOSAudio() {
 }
 
 function startIOSKeepAlive() {
-  // iOS Safari doesn't support WakeLock â€” use a silent looping audio element
+  // iOS Safari doesn't support WakeLock — use a silent looping audio element
   // as a keepalive so the page isn't suspended during sleep
   if (iosKeepAlive) return;
   {
     // Always run — keeps Android and iOS audio pipeline alive during sleep
-    // â€” create silent audio loop
+    // — create silent audio loop
     const silentSrc = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAABAAADhAD///////////////////////////////////////////8AAAA8TEFNRTMuMTAwBK8AAAAALgAAABRGJAYCQAAADhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//OEgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACg=';
     iosKeepAlive = new Audio(silentSrc);
     iosKeepAlive.loop = true;
@@ -835,7 +835,7 @@ function handleSleepFile(input) {
   const file = input.files[0];
   if (!file) return;
   sleepFileBlob = file;
-  document.getElementById('sleepFileName').textContent = 'âœ“ ' + file.name;
+  document.getElementById('sleepFileName').textContent = '✓ ' + file.name;
   const url = URL.createObjectURL(file);
   const audioEl = document.getElementById('sleepFileAudioEl');
   audioEl.src = url;
@@ -866,7 +866,7 @@ function toggleSleep() {
       document.getElementById('dotBinaural').classList.add('on');
       document.getElementById('dotAmbient').classList.remove('on');
       document.getElementById('statusBeat').textContent = 'File';
-      document.getElementById('statusAmbient').textContent = 'â€”';
+      document.getElementById('statusAmbient').textContent = '—';
     } else {
       // If context was closed (after a full stop), rebuild everything
       if (!audioCtx || audioCtx.state === 'closed') {
@@ -893,14 +893,14 @@ function toggleSleep() {
     }
     sleeping = true;
     sleepStartTime = new Date();
-    document.getElementById('sleepBtn').textContent = 'â–  Stop Sleep Audio';
+    document.getElementById('sleepBtn').textContent = '■ Stop Sleep Audio';
     requestWakeLock();
     startIOSKeepAlive();
   } else {
     const stopTime = new Date();
     stopAllAudio();
     sleeping = false;
-    document.getElementById('sleepBtn').textContent = 'â–¶ Start Sleep Audio';
+    document.getElementById('sleepBtn').textContent = '▶ Start Sleep Audio';
     document.getElementById('dotBinaural').classList.remove('on');
     document.getElementById('dotAmbient').classList.remove('on');
     document.getElementById('statusBeat').textContent = 'Stopped';
@@ -996,20 +996,20 @@ function updateAlarmVol(el) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ALARM
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Pre-loaded wake audio element â€” created during Arm (user gesture) so iOS allows play() later
+// Pre-loaded wake audio element — created during Arm (user gesture) so iOS allows play() later
 let preloadedWakeAudio = null;
 
 function toggleArm() {
   if (!armed) {
     armed = true;
-    document.getElementById('armBtn').textContent = 'âœ• Disarm';
+    document.getElementById('armBtn').textContent = '✕ Disarm';
     document.getElementById('armBtn').classList.add('btn-danger');
     document.getElementById('armBtn').classList.remove('btn-primary');
     document.getElementById('alarmPill').classList.add('show');
     startCountdown();
     // Pre-load wake audio now while we're in a user gesture context (iOS requirement)
     preloadWakeAudio();
-    // Check every 20s instead of 10s â€” and use a time-window check so a
+    // Check every 20s instead of 10s — and use a time-window check so a
     // throttled/missed tick can't cause a missed alarm
     alarmCheckInterval = setInterval(checkAlarm, 20000);
   } else {
@@ -1041,13 +1041,13 @@ function disarm() {
   document.getElementById('armBtn').classList.remove('btn-danger');
   document.getElementById('armBtn').classList.add('btn-primary');
   document.getElementById('alarmPill').classList.remove('show');
-  document.getElementById('countdown').textContent = 'â€”';
+  document.getElementById('countdown').textContent = '—';
 }
 
 function resetAlarm() {
   disarm();
   document.getElementById('alarmTime').value = '07:00';
-  document.getElementById('countdown').textContent = 'â€”';
+  document.getElementById('countdown').textContent = '—';
 }
 
 function startCountdown() {
@@ -1077,7 +1077,7 @@ function checkAlarm() {
   const now = new Date();
   let target = new Date();
   target.setHours(h, m, 0, 0);
-  // If the target already passed today, it's for tomorrow â€” skip
+  // If the target already passed today, it's for tomorrow — skip
   if (target < now - 90000) target.setDate(target.getDate() + 1);
   // Fire if we're within a 90-second window of the alarm time
   // This means even if the interval was throttled for up to ~70 seconds, we still catch it
@@ -1165,7 +1165,7 @@ function startWakeCrossfade(overrideMins) {
 }
 
 function recalcWakeProgress() {
-  // Called from visibilitychange â€” immediately correct the progress text
+  // Called from visibilitychange — immediately correct the progress text
   if (!wakeRampStartTime) return;
   const elapsed = new Date() - wakeRampStartTime;
   const pct = Math.min(100, Math.round(elapsed / wakeRampDurationMs * 100));
@@ -1182,9 +1182,9 @@ function playWakeAudio() {
   if (currentMode === 'voice' && wakeAudioBlob) blob = wakeAudioBlob;
   else if (currentMode === 'file' && wakeFileBlob) blob = wakeFileBlob;
 
-  if (!blob) return; // no wake audio selected â€” crossfade only
+  if (!blob) return; // no wake audio selected — crossfade only
 
-  // Use pre-loaded audio element if available (iOS requirement â€” play() must
+  // Use pre-loaded audio element if available (iOS requirement — play() must
   // have been called during a user gesture, which we did at arm time)
   let audio = preloadedWakeAudio;
   if (!audio) {
@@ -1281,7 +1281,7 @@ function startRecord() {
   navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}}).then(stream => {
     micStream = stream;
     recordedChunks = [];
-    // iOS Safari only supports audio/mp4 â€” detect at runtime
+    // iOS Safari only supports audio/mp4 — detect at runtime
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
                    : MediaRecorder.isTypeSupported('audio/mp4')  ? 'audio/mp4'
                    : '';
@@ -1312,7 +1312,7 @@ function stopRecord() {
 }
 
 function finalizeRecording() {
-  // Use the actual recorded mime type â€” iOS produces mp4, Android produces webm
+  // Use the actual recorded mime type — iOS produces mp4, Android produces webm
   const mimeType = (mediaRecorder && mediaRecorder.mimeType) ? mediaRecorder.mimeType : 'audio/webm';
   wakeAudioBlob = new Blob(recordedChunks, {type: mimeType});
   const url = URL.createObjectURL(wakeAudioBlob);
@@ -1338,7 +1338,7 @@ function handleWakeFile(input) {
   const file = input.files[0];
   if (!file) return;
   wakeFileBlob = file;
-  document.getElementById('wakeFileName').textContent = 'âœ“ ' + file.name;
+  document.getElementById('wakeFileName').textContent = '✓ ' + file.name;
   const url = URL.createObjectURL(file);
   document.getElementById('wakeFileAudio').src = url;
   document.getElementById('wakeFilePlayer').style.display = 'block';
@@ -1350,8 +1350,8 @@ function handleWakeFile(input) {
 function generateAIScript() {
   const custom = document.getElementById('aiScript').value;
   const scripts = {
-    gentle: `Good morning. The night is complete, and a new day opens softly before you. Take a slow breath. Feel the quiet. ${custom ? custom + ' ' : ''}There is nowhere to rush â€” just this moment, gently beginning.`,
-    energetic: `Rise and shine! Your body rested, your mind is fresh, and today is yours to own. ${custom ? custom + ' ' : ''}Let's make it count â€” time to move, breathe deep, and go get it!`,
+    gentle: `Good morning. The night is complete, and a new day opens softly before you. Take a slow breath. Feel the quiet. ${custom ? custom + ' ' : ''}There is nowhere to rush — just this moment, gently beginning.`,
+    energetic: `Rise and shine! Your body rested, your mind is fresh, and today is yours to own. ${custom ? custom + ' ' : ''}Let's make it count — time to move, breathe deep, and go get it!`,
     mindful: `Breathe in... and out. Notice the stillness of this moment before the day takes shape. ${custom ? custom + ' ' : ''}With intention and presence, step forward into your morning.`
   };
   const out = document.getElementById('aiOutput');
@@ -1378,7 +1378,7 @@ function logHistory(start, alarmTime, dismiss, totalMs) {
 }
 
 function formatDuration(ms) {
-  if (ms < 0) return 'â€”';
+  if (ms < 0) return '—';
   const totalMins = Math.floor(ms / 60000);
   const h = Math.floor(totalMins / 60);
   const m = totalMins % 60;
@@ -1463,7 +1463,7 @@ function renderPresetSelect(selected) {
   const presets = JSON.parse(localStorage.getItem('sw_presets') || '{}');
   const sel = document.getElementById('presetSelect');
   const names = Object.keys(presets).sort();
-  sel.innerHTML = '<option value="">â€” select preset â€”</option>' +
+  sel.innerHTML = '<option value="">— select preset —</option>' +
     names.map(n => `<option value="${n}"${n === selected ? ' selected' : ''}>${n}</option>`).join('');
 }
 
@@ -1487,7 +1487,7 @@ function savePreset() {
   renderPresetSelect(name);
   document.getElementById('presetNameInput').value = '';
   const btn = event.currentTarget;
-  btn.textContent = 'âœ“ Saved';
+  btn.textContent = '✓ Saved';
   setTimeout(() => { btn.textContent = 'Save'; }, 1500);
 }
 
@@ -1557,17 +1557,17 @@ function switchTab(name, btn) {
 // ONBOARDING
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function onboardGrant() {
-  // Request mic â€” browser shows its native permission dialog right here
+  // Request mic — browser shows its native permission dialog right here
   navigator.mediaDevices.getUserMedia({audio: true})
     .then(stream => {
-      // Got permission â€” stop the stream immediately, we just needed the grant
+      // Got permission — stop the stream immediately, we just needed the grant
       stream.getTracks().forEach(t => t.stop());
       localStorage.setItem('sw_onboarded', '1');
       localStorage.setItem('sw_mic', 'granted');
       closeOnboard();
     })
     .catch(() => {
-      // Denied â€” still let them in, just note it
+      // Denied — still let them in, just note it
       localStorage.setItem('sw_onboarded', '1');
       localStorage.setItem('sw_mic', 'denied');
       closeOnboard();
@@ -1593,12 +1593,12 @@ function showMicDeniedBanner() {
   banner.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:50;
     background:rgba(251,146,60,.15);border-bottom:1px solid rgba(251,146,60,.3);
     color:#fb923c;font-size:.78rem;padding:10px 16px;text-align:center;`;
-  banner.textContent = 'âš  Microphone access denied â€” voice recording unavailable. Enable in browser settings to use this feature.';
+  banner.textContent = '⚠ Microphone access denied — voice recording unavailable. Enable in browser settings to use this feature.';
   document.body.prepend(banner);
   setTimeout(() => banner.remove(), 6000);
 }
 
-// Check on load â€” show onboarding only on first visit
+// Check on load — show onboarding only on first visit
 if (!localStorage.getItem('sw_onboarded')) {
   document.getElementById('onboardOverlay').classList.add('show');
 } else {
@@ -1647,7 +1647,7 @@ async function requestWakeLock() {
         if (sleeping) setTimeout(requestWakeLock, 1000);
       });
     } catch (err) {
-      // WakeLock not granted â€” not fatal, visibility listener handles recovery
+      // WakeLock not granted — not fatal, visibility listener handles recovery
       console.warn('[SleepWave] WakeLock not available:', err.message);
     }
   }
@@ -2026,7 +2026,7 @@ function updateFreqVol(el) {
   padding:12px 16px;display:none;align-items:center;justify-content:space-between;
   font-family:'DM Sans',sans-serif;font-size:.85rem;color:#fff;
   box-shadow:0 -2px 16px rgba(108,142,255,.4);">
-  <span>âœ¦ New version available</span>
+  <span>✦ New version available</span>
   <button onclick="applyUpdate()" style="
     background:#fff;color:#6c8eff;border:none;border-radius:8px;
     padding:6px 14px;font-family:'DM Sans',sans-serif;font-size:.82rem;
@@ -2051,7 +2051,7 @@ function updateFreqVol(el) {
       navigator.serviceWorker.register('sw.js').then(reg => {
         console.log('[SleepWave] Service Worker registered');
 
-        // New SW waiting on first install â€” no banner needed
+        // New SW waiting on first install — no banner needed
         if (reg.waiting && navigator.serviceWorker.controller) {
           swWaiting = reg.waiting;
           document.getElementById('updateBanner').style.display = 'flex';
