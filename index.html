@@ -73,7 +73,7 @@ body::before{
 }
 .nav-btn{
   flex:1;padding:12px 0;border:none;background:none;color:var(--text3);
-  font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;
+  font-family:'DM Sans',sans-serif;font-size:.65rem;font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
   border-bottom:2px solid transparent;transition:all .2s;
 }
@@ -286,16 +286,86 @@ body::before{
 </div>
 
 <div class="nav">
+  <button class="nav-btn" onclick="switchTab('affirm',this)">Affirm</button>
   <button class="nav-btn active" onclick="switchTab('sleep',this)">Sleep</button>
+  <button class="nav-btn" onclick="switchTab('freq',this)">Tones</button>
   <button class="nav-btn" onclick="switchTab('wake',this)">Wake</button>
   <button class="nav-btn" onclick="switchTab('alarm',this)">Alarm</button>
   <button class="nav-btn" onclick="switchTab('history',this)">History</button>
-  <button class="nav-btn" onclick="switchTab('freq',this)">Tones</button>
 </div>
 
 <div class="main">
 
   <!-- â•â•â•â•â•â•â•â•â•â• SLEEP TAB â•â•â•â•â•â•â•â•â•â• -->
+  <!-- AFFIRMATIONS TAB -->
+  <div class="tab" id="tab-affirm">
+
+    <div class="card">
+      <div class="card-title">Affirmation Audio</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:12px;line-height:1.5">
+        Record or upload affirmations, guided meditation, or a hypnosis file. It plays first when you start sleep, then fades into your chosen background.
+      </div>
+      <div class="btn-group" id="affirmModeGroup">
+        <button class="tog active" onclick="setAffirmMode('voice',this)">Record</button>
+        <button class="tog" onclick="setAffirmMode('file',this)">Upload File</button>
+      </div>
+    </div>
+
+    <div class="card" id="affirmVoicePanel">
+      <div class="card-title">Record Affirmations</div>
+      <div class="rec-area" id="affirmRecArea">
+        <button class="btn btn-secondary" id="affirmRecBtn" onclick="toggleAffirmRecord()">⏺ Start Recording</button>
+        <div id="affirmRecStatus" style="margin-top:8px;display:none">
+          <div class="rec-indicator"><div class="rec-dot"></div><span id="affirmRecTime">0:00</span></div>
+        </div>
+      </div>
+      <div id="affirmPlaybackArea" style="display:none;margin-top:10px">
+        <audio id="affirmRecordedAudio" controls style="width:100%;height:36px;margin-bottom:8px"></audio>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" onclick="reAffirmRecord()">↺ Re-record</button>
+          <button class="btn btn-primary btn-sm" onclick="confirmAffirmRecording()">✓ Use This</button>
+        </div>
+      </div>
+      <div id="affirmRecConfirmed" style="display:none;font-size:.8rem;color:var(--success);margin-top:6px">✓ Recording saved as affirmation audio</div>
+    </div>
+
+    <div class="card" id="affirmFilePanel" style="display:none">
+      <div class="card-title">Upload Affirmation File</div>
+      <label class="file-upload" for="affirmFileInput">
+        <span class="file-upload-icon">🎵</span>
+        <div>
+          <div class="file-upload-text">Tap to choose an audio file</div>
+          <div class="file-upload-text" style="opacity:.6">MP3, WAV, M4A, OGG supported</div>
+        </div>
+      </label>
+      <input type="file" id="affirmFileInput" accept="audio/*" style="display:none" onchange="handleAffirmFile(this)">
+      <div id="affirmFileName" class="file-name"></div>
+      <div id="affirmFilePlayer" style="display:none;margin-top:10px">
+        <audio id="affirmFileAudio" controls style="width:100%;height:36px"></audio>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Then transition to</div>
+      <div style="font-size:.78rem;color:var(--text2);margin-bottom:12px;line-height:1.5">
+        After the affirmation ends, a 10-second crossfade brings in your chosen sleep background. Configure the sounds on the Sleep or Tones tab first.
+      </div>
+      <div class="btn-group" id="affirmBgGroup">
+        <button class="tog active" onclick="setAffirmBackground('sleep',this)">Sleep Sounds</button>
+        <button class="tog" onclick="setAffirmBackground('tones',this)">Tone Preset</button>
+      </div>
+      <div id="affirmToneSelect" style="display:none;margin-top:12px">
+        <div class="label">Choose Tone Preset</div>
+        <select id="affirmTonePresetSel" onchange="affirmTonePresetId=this.value"
+          style="width:100%;background:var(--surface3);border:1px solid var(--border2);
+                 border-radius:8px;padding:8px 10px;color:var(--text);
+                 font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;cursor:pointer;margin-top:6px">
+        </select>
+      </div>
+    </div>
+
+  </div>
+
   <div class="tab active" id="tab-sleep">
 
     <div class="card">
@@ -437,7 +507,7 @@ body::before{
     <div class="card" id="voicePanel">
       <div class="card-title">Record Your Wake Message</div>
       <div class="rec-area" id="recArea">
-        <button class="btn btn-secondary" id="recBtn" onclick="toggleRecord()">âº Start Recording</button>
+        <button class="btn btn-secondary" id="recBtn" onclick="toggleRecord()">⏺ Start Recording</button>
         <div id="recStatus" style="margin-top:8px;display:none">
           <div class="rec-indicator"><div class="rec-dot"></div><span id="recTime">0:00</span></div>
         </div>
@@ -508,7 +578,7 @@ body::before{
       <input type="time" class="clock-input" id="alarmTime" value="07:00">
       <div class="countdown" id="countdown">—</div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn btn-primary" id="armBtn" onclick="toggleArm()">â° Arm Alarm</button>
+        <button class="btn btn-primary" id="armBtn" onclick="toggleArm()">⏰ Arm Alarm</button>
         <button class="btn btn-secondary btn-sm" onclick="resetAlarm()" title="Reset alarm">↺ Reset</button>
       </div>
     </div>
@@ -658,6 +728,21 @@ let currentSleepMode = 'synth';
 let sleepFileBlob = null;
 let sleepFileAudio = null;
 let sleepFileSource = null;
+
+// Affirmations
+let affirmBlob = null;
+let affirmMode = 'voice';
+let affirmBackgroundMode = 'sleep';
+let affirmTonePresetId = null;
+let affirmAudioCtx = null;
+let affirmMasterGain = null;
+let affirmAudioEl = null;
+let affirmMediaRecorder = null;
+let affirmRecChunks = [];
+let affirmRecording = false;
+let affirmRecTimer = null;
+let affirmRecSeconds = 0;
+let sleepPhase = null; // null | 'affirmation' | 'transitioning' | 'sleeping'
 
 // nodes
 let leftOsc = null, rightOsc = null, binauralGain = null;
@@ -860,6 +945,7 @@ function initFileAudio() {
 
 function toggleSleep() {
   if (!sleeping) {
+    if (affirmBlob) { startAffirmPhase(); return; }
     if (currentSleepMode === 'file') {
       if (!sleepFileBlob) { alert('Please choose a sleep audio file first.'); return; }
       initFileAudio();
@@ -891,6 +977,7 @@ function toggleSleep() {
       document.getElementById('statusBeat').textContent = currentBeat.charAt(0).toUpperCase()+currentBeat.slice(1);
       document.getElementById('statusAmbient').textContent = 'Running';
     }
+    sleepPhase = 'sleeping';
     sleeping = true;
     sleepStartTime = new Date();
     document.getElementById('sleepBtn').textContent = '■ Stop Sleep Audio';
@@ -898,6 +985,7 @@ function toggleSleep() {
     startIOSKeepAlive();
   } else {
     const stopTime = new Date();
+    sleepPhase = null;
     stopAllAudio();
     sleeping = false;
     document.getElementById('sleepBtn').textContent = '▶ Start Sleep Audio';
@@ -919,6 +1007,7 @@ function toggleSleep() {
 }
 
 function stopAllAudio() {
+  stopAffirmAudio();
   if (sleepFileAudio) {
     sleepFileAudio.pause();
     sleepFileAudio.src = '';
@@ -1037,7 +1126,7 @@ function disarm() {
   armed = false;
   clearInterval(alarmCheckInterval);
   clearInterval(countdownInterval);
-  document.getElementById('armBtn').textContent = 'â° Arm Alarm';
+  document.getElementById('armBtn').textContent = '⏰ Arm Alarm';
   document.getElementById('armBtn').classList.remove('btn-danger');
   document.getElementById('armBtn').classList.add('btn-primary');
   document.getElementById('alarmPill').classList.remove('show');
@@ -1142,7 +1231,18 @@ function startWakeCrossfade(overrideMins) {
     masterGain.gain.linearRampToValueAtTime(0, now + secs);
   }
 
-  // Fade any playing Tones preset down to 0 over the same ramp duration
+  // If alarm fires during affirmation phase, stop it immediately
+  if (sleepPhase === 'affirmation') {
+    stopAffirmAudio();
+    sleepPhase = 'sleeping';
+  } else if (affirmMasterGain && affirmAudioCtx) {
+    const aNow = affirmAudioCtx.currentTime;
+    affirmMasterGain.gain.cancelScheduledValues(aNow);
+    affirmMasterGain.gain.setValueAtTime(affirmMasterGain.gain.value, aNow);
+    affirmMasterGain.gain.linearRampToValueAtTime(0, aNow + secs);
+  }
+
+    // Fade any playing Tones preset down to 0 over the same ramp duration
   if (freqMasterGain && freqAudioCtx) {
     const fNow = freqAudioCtx.currentTime;
     freqMasterGain.gain.cancelScheduledValues(fNow);
@@ -1235,6 +1335,8 @@ function dismissAlarm() {
 
   // Stop any playing Tones preset
   if (freqPlayingId) stopFreq();
+  stopAffirmAudio();
+  sleepPhase = null;
 
   // log to history
   const now = new Date();
@@ -1289,7 +1391,7 @@ function startRecord() {
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = finalizeRecording;
     mediaRecorder.start();
-    document.getElementById('recBtn').textContent = 'â¹ Stop Recording';
+    document.getElementById('recBtn').textContent = '⏹ Stop Recording';
     document.getElementById('recStatus').style.display = 'block';
     document.getElementById('playbackArea').style.display = 'none';
     recSeconds = 0;
@@ -1307,7 +1409,7 @@ function stopRecord() {
   clearInterval(recordingTimer);
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  document.getElementById('recBtn').textContent = 'âº Start Recording';
+  document.getElementById('recBtn').textContent = '⏺ Start Recording';
   document.getElementById('recStatus').style.display = 'none';
 }
 
@@ -1606,6 +1708,7 @@ if (!localStorage.getItem('sw_onboarded')) {
 }
 
 loadSettings();
+initAffirmToneSelect();
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // VISIBILITY / SCREEN LOCK RECOVERY
@@ -2017,6 +2120,196 @@ function updateFreqVol(el) {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// AFFIRMATIONS
+// ══════════════════════════════════════════════════════════════
+function initAffirmToneSelect() {
+  var sel = document.getElementById('affirmTonePresetSel');
+  FREQ_PRESETS.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.symbol + ' ' + p.name + ' — ' + p.label;
+    sel.appendChild(opt);
+  });
+  affirmTonePresetId = FREQ_PRESETS[0].id;
+}
+
+function setAffirmMode(mode, el) {
+  affirmMode = mode;
+  document.querySelectorAll('#affirmModeGroup .tog').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('affirmVoicePanel').style.display = mode === 'voice' ? '' : 'none';
+  document.getElementById('affirmFilePanel').style.display = mode === 'file' ? '' : 'none';
+}
+
+function setAffirmBackground(mode, el) {
+  affirmBackgroundMode = mode;
+  document.querySelectorAll('#affirmBgGroup .tog').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('affirmToneSelect').style.display = mode === 'tones' ? '' : 'none';
+}
+
+function handleAffirmFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  affirmBlob = file;
+  document.getElementById('affirmFileName').textContent = '✓ ' + file.name;
+  document.getElementById('affirmFileAudio').src = URL.createObjectURL(file);
+  document.getElementById('affirmFilePlayer').style.display = 'block';
+}
+
+function toggleAffirmRecord() {
+  if (!affirmRecording) {
+    navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+      .then(function(stream) {
+        micStream = stream;
+        var mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+        affirmMediaRecorder = new MediaRecorder(stream, {mimeType:mimeType});
+        affirmRecChunks = [];
+        affirmMediaRecorder.ondataavailable = function(e){ if (e.data.size>0) affirmRecChunks.push(e.data); };
+        affirmMediaRecorder.onstop = function() {
+          affirmBlob = new Blob(affirmRecChunks, {type:affirmMediaRecorder.mimeType});
+          document.getElementById('affirmRecordedAudio').src = URL.createObjectURL(affirmBlob);
+          document.getElementById('affirmPlaybackArea').style.display = 'block';
+          document.getElementById('affirmRecArea').style.display = 'none';
+          if (micStream) { micStream.getTracks().forEach(function(t){t.stop();}); micStream = null; }
+        };
+        affirmMediaRecorder.start();
+        affirmRecording = true; affirmRecSeconds = 0;
+        document.getElementById('affirmRecBtn').textContent = '⏹ Stop Recording';
+        document.getElementById('affirmRecStatus').style.display = 'block';
+        affirmRecTimer = setInterval(function() {
+          affirmRecSeconds++;
+          var m = Math.floor(affirmRecSeconds/60), s = affirmRecSeconds%60;
+          document.getElementById('affirmRecTime').textContent = m+':'+(s<10?'0':'')+s;
+        }, 1000);
+      }).catch(function(){ alert('Microphone access is needed to record.'); });
+  } else {
+    clearInterval(affirmRecTimer); affirmRecTimer = null;
+    affirmRecording = false;
+    if (affirmMediaRecorder && affirmMediaRecorder.state !== 'inactive') affirmMediaRecorder.stop();
+    document.getElementById('affirmRecBtn').textContent = '⏺ Start Recording';
+    document.getElementById('affirmRecStatus').style.display = 'none';
+  }
+}
+
+function reAffirmRecord() {
+  affirmBlob = null;
+  document.getElementById('affirmPlaybackArea').style.display = 'none';
+  document.getElementById('affirmRecArea').style.display = 'block';
+  document.getElementById('affirmRecConfirmed').style.display = 'none';
+}
+
+function confirmAffirmRecording() {
+  document.getElementById('affirmPlaybackArea').style.display = 'none';
+  document.getElementById('affirmRecConfirmed').style.display = 'block';
+}
+
+function stopAffirmAudio() {
+  if (affirmAudioEl) {
+    try { affirmAudioEl.pause(); affirmAudioEl.src = ''; } catch(e){}
+    affirmAudioEl = null;
+  }
+  if (affirmAudioCtx) {
+    if (affirmMasterGain) {
+      try { affirmMasterGain.gain.setTargetAtTime(0, affirmAudioCtx.currentTime, 0.2); } catch(e){}
+    }
+    var ctx = affirmAudioCtx;
+    affirmAudioCtx = null; affirmMasterGain = null;
+    setTimeout(function(){ try { ctx.close(); } catch(e){} }, 600);
+  }
+}
+
+function startAffirmPhase() {
+  affirmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (affirmAudioCtx.state === 'suspended') affirmAudioCtx.resume();
+  affirmMasterGain = affirmAudioCtx.createGain();
+  affirmMasterGain.gain.value = parseFloat(document.getElementById('masterVol').value) / 100;
+  affirmMasterGain.connect(affirmAudioCtx.destination);
+
+  var url = URL.createObjectURL(affirmBlob);
+  affirmAudioEl = new Audio(url);
+  var src = affirmAudioCtx.createMediaElementSource(affirmAudioEl);
+  src.connect(affirmMasterGain);
+  affirmAudioEl.addEventListener('ended', startAffirmTransition, {once:true});
+  affirmAudioEl.play().catch(function(){});
+
+  sleepPhase = 'affirmation';
+  sleeping = true;
+  sleepStartTime = new Date();
+  document.getElementById('sleepBtn').textContent = '■ Stop Sleep Audio';
+  document.getElementById('dotBinaural').classList.add('on');
+  document.getElementById('dotAmbient').classList.remove('on');
+  document.getElementById('statusBeat').textContent = 'Affirming…';
+  document.getElementById('statusAmbient').textContent = 'Waiting';
+  requestWakeLock();
+  startIOSKeepAlive();
+}
+
+function startAffirmTransition() {
+  if (!sleeping) return;
+  sleepPhase = 'transitioning';
+  var ramp = 10;
+
+  if (affirmAudioCtx && affirmMasterGain) {
+    var aNow = affirmAudioCtx.currentTime;
+    affirmMasterGain.gain.cancelScheduledValues(aNow);
+    affirmMasterGain.gain.setValueAtTime(affirmMasterGain.gain.value, aNow);
+    affirmMasterGain.gain.linearRampToValueAtTime(0, aNow + ramp);
+  }
+
+  if (affirmBackgroundMode === 'tones') {
+    var pid = affirmTonePresetId || FREQ_PRESETS[0].id;
+    var preset = FREQ_PRESETS.find(function(p){ return p.id === pid; });
+    if (preset) startFreq(preset);
+    document.getElementById('dotAmbient').classList.add('on');
+    document.getElementById('statusBeat').textContent = 'Tones';
+    document.getElementById('statusAmbient').textContent = 'Tones';
+  } else if (currentSleepMode === 'file' && sleepFileBlob) {
+    initFileAudio();
+    var fNow = audioCtx.currentTime, fVol = parseFloat(document.getElementById('masterVol').value)/100;
+    masterGain.gain.cancelScheduledValues(fNow);
+    masterGain.gain.setValueAtTime(0, fNow);
+    masterGain.gain.linearRampToValueAtTime(fVol, fNow + ramp);
+    document.getElementById('dotBinaural').classList.add('on');
+    document.getElementById('statusBeat').textContent = 'File';
+    document.getElementById('statusAmbient').textContent = '–';
+  } else {
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = null; leftOsc = null; rightOsc = null; binauralGain = null;
+      brownSrc = null; whiteSrc = null; rainSrc = null;
+      brownGain = null; whiteGain = null; rainGain = null;
+      ambientMaster = null; masterGain = null;
+    }
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var mNow = audioCtx.currentTime;
+    var mVol = parseFloat(document.getElementById('masterVol').value)/100;
+    var bVol = parseFloat(document.getElementById('binauralVol').value)/100;
+    masterGain.gain.cancelScheduledValues(mNow);
+    masterGain.gain.setValueAtTime(0, mNow);
+    masterGain.gain.linearRampToValueAtTime(mVol, mNow + ramp);
+    binauralGain.gain.cancelScheduledValues(mNow);
+    binauralGain.gain.setValueAtTime(0, mNow);
+    binauralGain.gain.linearRampToValueAtTime(bVol, mNow + ramp);
+    ambientMaster.gain.cancelScheduledValues(mNow);
+    ambientMaster.gain.setValueAtTime(0, mNow);
+    ambientMaster.gain.linearRampToValueAtTime(1, mNow + ramp);
+    document.getElementById('dotBinaural').classList.add('on');
+    document.getElementById('dotAmbient').classList.add('on');
+    document.getElementById('statusBeat').textContent = currentBeat.charAt(0).toUpperCase()+currentBeat.slice(1);
+    document.getElementById('statusAmbient').textContent = 'Running';
+  }
+
+  setTimeout(function() {
+    if (affirmAudioEl) { try { affirmAudioEl.pause(); affirmAudioEl.src=''; } catch(e){} affirmAudioEl = null; }
+    var ctx = affirmAudioCtx;
+    affirmAudioCtx = null; affirmMasterGain = null;
+    if (ctx) setTimeout(function(){ try { ctx.close(); } catch(e){} }, 200);
+    sleepPhase = 'sleeping';
+  }, ramp * 1000);
+}
 </script>
 
 <!-- Update banner -->
