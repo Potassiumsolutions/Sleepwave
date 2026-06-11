@@ -272,6 +272,10 @@ body::before{
   animation:pulse 1.5s ease infinite;display:none;
 }
 .freq-card.playing .freq-dot{display:block}
+/* Center the lone card when 9 (odd) presets fill a 2-col grid */
+.freq-grid>.freq-card:last-child:nth-child(odd){
+  grid-column:1/-1;justify-self:center;width:calc(50% - 5px);
+}
 </style>
 </head>
 <body>
@@ -1666,7 +1670,8 @@ const FREQ_PRESETS = [
   { id:'hz432',           hz:432,  name:'432 Hz',          label:'Natural Tuning',     symbol:'✿',  color:'#4ade80' },
   { id:'hz639',           hz:639,  name:'639 Hz',          label:'Heart Connection',   symbol:'♡',  color:'#fb923c' },
   { id:'hz741',           hz:741,  name:'741 Hz',          label:'Intuition',          symbol:'◉',  color:'#f87171' },
-  { id:'hz963',           hz:963,  name:'963 Hz',          label:'Crown Frequency',    symbol:'✸',  color:'#c4b5fd' }
+  { id:'hz963',           hz:963,  name:'963 Hz',          label:'Crown Frequency',    symbol:'✸',  color:'#c4b5fd' },
+  { id:'hz432_drone',     hz:432,  name:'432 Hz',          label:'Analog Drone',       symbol:'◎',  color:'#f472b6', variant:'drone432' }
 ];
 
 let freqAudioCtx = null;
@@ -1839,6 +1844,107 @@ function startFreq(preset) {
       freqMelodyTimer = setTimeout(scheduleMelody, 3000 + Math.random() * 9000);
     }
     scheduleMelody();
+
+  } else if (preset.variant === 'drone432') {
+    // ── 432.086 Hz Analog Drone — Pythagorean / Cosmic tuning ────
+    var ROOT = 432.086;
+
+    // All drone oscillators route through this bus into the cascaded filter
+    var droneBus = freqAudioCtx.createGain(); droneBus.gain.value = 1;
+
+    // Cascaded 24 dB/octave lowpass: two 12 dB stages in series
+    var lpf1 = freqAudioCtx.createBiquadFilter(); lpf1.type='lowpass'; lpf1.frequency.value=385; lpf1.Q.value=1.2;
+    var lpf2 = freqAudioCtx.createBiquadFilter(); lpf2.type='lowpass'; lpf2.frequency.value=385; lpf2.Q.value=1.2;
+    droneBus.connect(lpf1); lpf1.connect(lpf2); lpf2.connect(freqMasterGain);
+
+    // Breathing LFO: 0.04 Hz — sweeps cutoff 120→650 Hz (center 385, depth ±265)
+    var bLfo = freqAudioCtx.createOscillator(); bLfo.frequency.value=0.04;
+    var bLfoG = freqAudioCtx.createGain(); bLfoG.gain.value=265;
+    bLfo.connect(bLfoG); bLfoG.connect(lpf1.frequency); bLfoG.connect(lpf2.frequency);
+    bLfo.start(); freqOscNodes.push(bLfo);
+
+    // AM LFO: 0.01 Hz, ±1.5 dB ≈ ±0.17 amplitude — keeps the drone alive, never static
+    var amLfo = freqAudioCtx.createOscillator(); amLfo.frequency.value=0.01;
+    var amLfoG = freqAudioCtx.createGain(); amLfoG.gain.value=0.17;
+    amLfo.connect(amLfoG); amLfoG.connect(freqMasterGain.gain);
+    amLfo.start(); freqOscNodes.push(amLfo);
+
+    // Four drone oscillators: Triangle 70% + Sawtooth 30%, each pair detuned ±4 cents
+    // Sawtooth adds the harmonic overtones that stop the pad sounding flat/digital
+    [{type:'triangle',cents:+4,gain:.35},{type:'triangle',cents:-4,gain:.35},
+     {type:'sawtooth', cents:+4,gain:.15},{type:'sawtooth', cents:-4,gain:.15}].forEach(function(o) {
+      var osc = freqAudioCtx.createOscillator();
+      osc.type=o.type; osc.frequency.value=ROOT; osc.detune.value=o.cents;
+      var g = freqAudioCtx.createGain(); g.gain.value=o.gain;
+      osc.connect(g).connect(droneBus); osc.start(); freqOscNodes.push(osc);
+    });
+
+    // Pythagorean sub-octave (216 Hz) and fifth (648 Hz) for harmonic depth
+    [{hz:ROOT/2,type:'triangle',gain:.10},{hz:ROOT*1.5,type:'triangle',gain:.08}].forEach(function(o) {
+      var osc = freqAudioCtx.createOscillator(); osc.type=o.type; osc.frequency.value=o.hz;
+      var g = freqAudioCtx.createGain(); g.gain.value=o.gain;
+      osc.connect(g).connect(droneBus); osc.start(); freqOscNodes.push(osc);
+    });
+
+    // Sparkle layer — bandpassed 3.5–9 kHz, pentatonic from ROOT
+    var sparkHP = freqAudioCtx.createBiquadFilter(); sparkHP.type='highpass'; sparkHP.frequency.value=3500;
+    var sparkLP2 = freqAudioCtx.createBiquadFilter(); sparkLP2.type='lowpass'; sparkLP2.frequency.value=9000;
+    sparkHP.connect(sparkLP2);
+
+    // Dry sparkle mix (25%)
+    var sparkDry = freqAudioCtx.createGain(); sparkDry.gain.value=0.25;
+    sparkLP2.connect(sparkDry); sparkDry.connect(freqMasterGain);
+
+    // Ping-pong delay: 0.375 s per side, 65% feedback, alternating L/R
+    var ppL = freqAudioCtx.createDelay(1.0); ppL.delayTime.value=0.375;
+    var ppR = freqAudioCtx.createDelay(1.0); ppR.delayTime.value=0.375;
+    var ppPanL = freqAudioCtx.createStereoPanner(); ppPanL.pan.value=-0.8;
+    var ppPanR = freqAudioCtx.createStereoPanner(); ppPanR.pan.value=0.8;
+    var ppFbL = freqAudioCtx.createGain(); ppFbL.gain.value=0.65;
+    var ppFbR = freqAudioCtx.createGain(); ppFbR.gain.value=0.65;
+    sparkLP2.connect(ppL);
+    ppL.connect(ppPanL); ppPanL.connect(freqMasterGain);
+    ppL.connect(ppFbL); ppFbL.connect(ppR);
+    ppR.connect(ppPanR); ppPanR.connect(freqMasterGain);
+    ppR.connect(ppFbR); ppFbR.connect(ppL);
+
+    // Plate reverb: 45 ms pre-delay, 300 Hz low-cut, 14 s RT60
+    // Parallel comb FDN — feedback per line tuned to 14 s RT60
+    var rvPre = freqAudioCtx.createDelay(0.1); rvPre.delayTime.value=0.045;
+    var rvHP = freqAudioCtx.createBiquadFilter(); rvHP.type='highpass'; rvHP.frequency.value=300;
+    var rvOut = freqAudioCtx.createGain(); rvOut.gain.value=0.55;
+    sparkLP2.connect(rvPre); rvPre.connect(rvHP);
+    [0.031,0.067,0.107,0.157,0.197,0.241].forEach(function(t) {
+      var d = freqAudioCtx.createDelay(1.0); d.delayTime.value=t;
+      var fb = freqAudioCtx.createGain(); fb.gain.value=Math.pow(0.001,t/14);
+      d.connect(fb); fb.connect(d); fb.connect(rvOut); rvHP.connect(d);
+    });
+    rvOut.connect(freqMasterGain);
+
+    // Sparkle scheduler: ADSR 2 ms attack / 500 ms decay / sustain 0
+    // Pentatonic from ROOT — octaves 8–20 land in the 3.5–9 kHz window
+    var SPARK432D = [ROOT*8,ROOT*10,ROOT*12,ROOT*15,ROOT*16,ROOT*18,ROOT*20];
+    function scheduleDroneSparkle() {
+      if (freqPlayingId!=='hz432_drone'||!freqAudioCtx) return;
+      var now = freqAudioCtx.currentTime;
+      var freq = SPARK432D[Math.floor(Math.random()*SPARK432D.length)];
+      var so = freqAudioCtx.createOscillator(); so.frequency.value=freq;
+      var sg = freqAudioCtx.createGain();
+      sg.gain.setValueAtTime(0,now);
+      sg.gain.linearRampToValueAtTime(0.18,now+0.002);   // 2 ms attack
+      sg.gain.exponentialRampToValueAtTime(0.001,now+0.502); // 500 ms decay
+      so.connect(sg).connect(sparkHP);
+      so.start(now); so.stop(now+0.52);
+      freqSparkleTimer=setTimeout(scheduleDroneSparkle,600+Math.random()*2800);
+    }
+    scheduleDroneSparkle();
+
+    // Faint brown noise underpinning
+    freqNoiseSrc=freqAudioCtx.createBufferSource();
+    freqNoiseSrc.buffer=freqMakeNoise(freqAudioCtx,'brown'); freqNoiseSrc.loop=true;
+    var dnf=freqAudioCtx.createBiquadFilter(); dnf.type='lowpass'; dnf.frequency.value=180;
+    var dng=freqAudioCtx.createGain(); dng.gain.value=0.012;
+    freqNoiseSrc.connect(dnf).connect(dng).connect(freqMasterGain); freqNoiseSrc.start();
 
   } else {
     // ── Default warm chorus (528, 432, 639, 741, 963) ────────────
