@@ -76,6 +76,12 @@ body::before{
   font-family:'DM Sans',sans-serif;font-size:.65rem;font-weight:600;
   letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
   border-bottom:2px solid transparent;transition:all .2s;
+  position:relative;
+}
+.nav-btn.configured::after{
+  content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;
+  background:var(--accent2);
 }
 .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 
@@ -1241,6 +1247,7 @@ let preloadedWakeAudio = null;
 function toggleArm() {
   if (!armed) {
     armed = true;
+    refreshNavDots();
     document.getElementById('armBtn').textContent = '✕ Disarm';
     document.getElementById('armBtn').classList.add('btn-danger');
     document.getElementById('armBtn').classList.remove('btn-primary');
@@ -1274,6 +1281,7 @@ function preloadWakeAudio() {
 
 function disarm() {
   armed = false;
+  refreshNavDots();
   clearInterval(alarmCheckInterval);
   clearInterval(countdownInterval);
   document.getElementById('armBtn').textContent = '⏰ Arm Alarm';
@@ -1599,6 +1607,7 @@ function reRecord() {
 function confirmRecording() {
   document.getElementById('playbackArea').style.display = 'none';
   document.getElementById('recConfirmed').style.display = 'block';
+  refreshNavDots();
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1612,6 +1621,7 @@ function handleWakeFile(input) {
   const url = URL.createObjectURL(file);
   document.getElementById('wakeFileAudio').src = url;
   document.getElementById('wakeFilePlayer').style.display = 'block';
+  refreshNavDots();
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1814,6 +1824,23 @@ function clearHistory() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB NAVIGATION
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function refreshNavDots() {
+  var dots = {
+    affirm: !!affirmBlob,
+    freq:   !!freqPlayingId,
+    wake:   !!(wakeAudioBlob || wakeFileBlob || (currentMode === 'builtin' && builtinAlarmId)),
+    alarm:  armed,
+  };
+  document.querySelectorAll('.nav-btn').forEach(function(b) {
+    var oc = b.getAttribute('onclick') || '';
+    var on = false;
+    Object.keys(dots).forEach(function(tab) {
+      if (oc.indexOf("'" + tab + "'") !== -1) on = dots[tab];
+    });
+    b.classList.toggle('configured', on);
+  });
+}
+
 function switchTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -2265,6 +2292,7 @@ function startFreq(preset) {
   }
 
   freqPlayingId = preset.id;
+  refreshNavDots();
   renderFreqPresets();
 }
 
@@ -2275,6 +2303,7 @@ function stopFreq() {
   freqMasterGain.gain.setTargetAtTime(0, freqAudioCtx.currentTime, 0.4);
   var ctx = freqAudioCtx;
   freqAudioCtx = null; freqMasterGain = null; freqOscNodes = []; freqNoiseSrc = null; freqPlayingId = null;
+  refreshNavDots();
   renderFreqPresets();
   setTimeout(function() { ctx.close(); }, 1200);
 }
@@ -2327,6 +2356,7 @@ function handleAffirmFile(input) {
   document.getElementById('affirmFileName').textContent = '✓ ' + file.name;
   document.getElementById('affirmFileAudio').src = URL.createObjectURL(file);
   document.getElementById('affirmFilePlayer').style.display = 'block';
+  refreshNavDots();
 }
 
 function toggleAffirmRecord() {
@@ -2374,6 +2404,7 @@ function reAffirmRecord() {
 function confirmAffirmRecording() {
   document.getElementById('affirmPlaybackArea').style.display = 'none';
   document.getElementById('affirmRecConfirmed').style.display = 'block';
+  refreshNavDots();
 }
 
 function stopAffirmAudio() {
