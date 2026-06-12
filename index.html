@@ -2478,6 +2478,24 @@ function startAffirmPhase() {
   affirmAudioEl = new Audio(url);
   var src = affirmAudioCtx.createMediaElementSource(affirmAudioEl);
   src.connect(affirmMasterGain);
+  // Uploaded file: fade affirmation to 50% in its last 2 seconds for a softer handoff
+  if (affirmMode === 'file') {
+    var _fadedToHalf = false;
+    affirmAudioEl.addEventListener('timeupdate', function() {
+      if (_fadedToHalf || !affirmAudioCtx || !affirmMasterGain) return;
+      var dur = affirmAudioEl.duration;
+      if (!dur || !isFinite(dur)) return;
+      var remaining = dur - affirmAudioEl.currentTime;
+      if (remaining <= 2 && remaining > 0) {
+        _fadedToHalf = true;
+        var aN = affirmAudioCtx.currentTime;
+        var half = affirmMasterGain.gain.value * 0.5;
+        affirmMasterGain.gain.cancelScheduledValues(aN);
+        affirmMasterGain.gain.setValueAtTime(affirmMasterGain.gain.value, aN);
+        affirmMasterGain.gain.linearRampToValueAtTime(half, aN + Math.min(remaining, 2));
+      }
+    });
+  }
   var _repeatsLeft = affirmRepeat ? (affirmRepeatCount - 1) : 0;
   function _onAffirmEnded() {
     if (!sleeping) return;
@@ -2604,7 +2622,17 @@ function startAffirmTransition() {
   } else if (affirmBackgroundMode === 'tones') {
     var pid = affirmTonePresetId || FREQ_PRESETS[0].id;
     var preset = FREQ_PRESETS.find(function(p){ return p.id === pid; });
-    if (preset) startFreq(preset);
+    if (preset) {
+      startFreq(preset);
+      // Start at 50% of target — gentler entry
+      if (freqAudioCtx && freqMasterGain) {
+        var fHN = freqAudioCtx.currentTime;
+        var fHV = parseFloat(document.getElementById('freqVol').value) / 100;
+        freqMasterGain.gain.cancelScheduledValues(fHN);
+        freqMasterGain.gain.setValueAtTime(fHV * 0.5, fHN);
+        freqMasterGain.gain.linearRampToValueAtTime(fHV, fHN + ramp);
+      }
+    }
     document.getElementById('dotAmbient').classList.add('on');
     document.getElementById('statusBeat').textContent = 'Tones';
     document.getElementById('statusAmbient').textContent = 'Tones';
@@ -2612,7 +2640,7 @@ function startAffirmTransition() {
     initFileAudio();
     var fNow = audioCtx.currentTime, fVol2 = parseFloat(document.getElementById('masterVol').value)/100;
     masterGain.gain.cancelScheduledValues(fNow);
-    masterGain.gain.setValueAtTime(0, fNow);
+    masterGain.gain.setValueAtTime(fVol2 * 0.5, fNow);
     masterGain.gain.linearRampToValueAtTime(fVol2, fNow + ramp);
     document.getElementById('dotBinaural').classList.add('on');
     document.getElementById('statusBeat').textContent = 'File';
@@ -2630,13 +2658,13 @@ function startAffirmTransition() {
     var mVol = parseFloat(document.getElementById('masterVol').value)/100;
     var bVol = parseFloat(document.getElementById('binauralVol').value)/100;
     masterGain.gain.cancelScheduledValues(mNow);
-    masterGain.gain.setValueAtTime(0, mNow);
+    masterGain.gain.setValueAtTime(mVol * 0.5, mNow);
     masterGain.gain.linearRampToValueAtTime(mVol, mNow + ramp);
     binauralGain.gain.cancelScheduledValues(mNow);
-    binauralGain.gain.setValueAtTime(0, mNow);
+    binauralGain.gain.setValueAtTime(bVol * 0.5, mNow);
     binauralGain.gain.linearRampToValueAtTime(bVol, mNow + ramp);
     ambientMaster.gain.cancelScheduledValues(mNow);
-    ambientMaster.gain.setValueAtTime(0, mNow);
+    ambientMaster.gain.setValueAtTime(0.5, mNow);
     ambientMaster.gain.linearRampToValueAtTime(1, mNow + ramp);
     document.getElementById('dotBinaural').classList.add('on');
     document.getElementById('dotAmbient').classList.add('on');
