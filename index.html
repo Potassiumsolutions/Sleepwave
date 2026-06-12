@@ -1510,16 +1510,18 @@ function dismissAlarm() {
   stopAffirmAudio();
   sleepPhase = null;
 
-  // show save prompt (same flow as manual stop)
+  // show save prompt only if a sleep session was actually running
   const now = new Date();
-  pendingSessionStart = sleepStartTime || now;
-  pendingSessionStop = now;
-  pendingAlarmFireTime = alarmFireTime || now;
+  if (sleepStartTime) {
+    pendingSessionStart = sleepStartTime;
+    pendingSessionStop = now;
+    pendingAlarmFireTime = alarmFireTime || now;
+    document.getElementById('sleepLogDuration').textContent =
+      'Duration: ' + formatDuration(pendingSessionStop - pendingSessionStart);
+    document.getElementById('sleepLogPrompt').classList.add('show');
+  }
   sleepStartTime = null;
   alarmFireTime = null;
-  document.getElementById('sleepLogDuration').textContent =
-    'Duration: ' + formatDuration(pendingSessionStop - pendingSessionStart);
-  document.getElementById('sleepLogPrompt').classList.add('show');
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1990,6 +1992,7 @@ let freqNoiseSrc = null;
 let freqSparkleTimer = null;
 let freqMelodyTimer = null;
 let freqPlayingId = null;
+let freqStartTime = null;
 
 initAffirmToneSelect();
 
@@ -2033,6 +2036,7 @@ function freqMakeNoise(ctx, type) {
 }
 
 function startFreq(preset) {
+  freqStartTime = new Date();
   freqAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   freqMasterGain = freqAudioCtx.createGain();
   const vol = parseFloat(document.getElementById('freqVol').value) / 100;
@@ -2306,6 +2310,17 @@ function stopFreq() {
   refreshNavDots();
   renderFreqPresets();
   setTimeout(function() { ctx.close(); }, 1200);
+  // 10-minute fence: prompt to log if tone ran long enough and sleep isn't covering it
+  var tStart = freqStartTime;
+  freqStartTime = null;
+  if (tStart && !sleeping && (new Date() - tStart) >= 10 * 60 * 1000) {
+    pendingSessionStart = tStart;
+    pendingSessionStop = new Date();
+    pendingAlarmFireTime = null;
+    document.getElementById('sleepLogDuration').textContent =
+      'Duration: ' + formatDuration(pendingSessionStop - pendingSessionStart);
+    document.getElementById('sleepLogPrompt').classList.add('show');
+  }
 }
 
 function updateFreqVol(el) {
