@@ -285,6 +285,53 @@ body::before{
 .alarm-card.selected.previewing{border-color:#f87171;box-shadow:0 0 14px rgba(248,113,113,.35)}
 .alarm-em{font-size:1.8rem;line-height:1;margin-bottom:6px;display:block}
 .alarm-nm{font-size:.72rem;font-weight:600;letter-spacing:.04em;color:var(--text2)}
+
+/* GUIDE TAB */
+.guide-hero{
+  text-align:center;padding:28px 20px 20px;
+}
+.guide-hero-icon{font-size:2.8rem;margin-bottom:10px}
+.guide-hero-title{
+  font-family:'DM Serif Display',serif;font-size:1.6rem;
+  background:linear-gradient(135deg,#a5b8ff,#c4b5fd);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:6px
+}
+.guide-hero-sub{font-size:.82rem;color:var(--text2);line-height:1.55;max-width:320px;margin:0 auto}
+
+.guide-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.guide-step{
+  display:flex;align-items:flex-start;gap:14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:13px 14px;
+}
+.guide-step.optional{border-style:dashed;opacity:.85}
+.guide-num{
+  min-width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+}
+.guide-step.optional .guide-num{background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
+.guide-step-body{flex:1}
+.guide-step-header{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.guide-step-tab{
+  font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 8px;border-radius:10px;
+  background:rgba(108,142,255,.15);color:var(--accent);border:1px solid rgba(108,142,255,.25);
+}
+.guide-step.optional .guide-step-tab{
+  background:rgba(139,144,184,.1);color:var(--text2);border-color:var(--border2);
+}
+.guide-step-title{font-size:.86rem;font-weight:600;color:var(--text)}
+.guide-step-desc{font-size:.78rem;color:var(--text2);line-height:1.5}
+
+.guide-tip{
+  background:rgba(108,142,255,.07);border:1px solid rgba(108,142,255,.2);
+  border-radius:10px;padding:11px 14px;margin-bottom:14px;
+  font-size:.78rem;color:var(--text2);line-height:1.5
+}
+.guide-tip strong{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -295,8 +342,9 @@ body::before{
 </div>
 
 <div class="nav">
+  <button class="nav-btn active" onclick="switchTab('guide',this)">Guide</button>
   <button class="nav-btn" onclick="switchTab('affirm',this)">Affirm</button>
-  <button class="nav-btn active" onclick="switchTab('sleep',this)">Sleep</button>
+  <button class="nav-btn" onclick="switchTab('sleep',this)">Sleep</button>
   <button class="nav-btn" onclick="switchTab('freq',this)">Tones</button>
   <button class="nav-btn" onclick="switchTab('wake',this)">Wake</button>
   <button class="nav-btn" onclick="switchTab('alarm',this)">Alarm</button>
@@ -306,7 +354,83 @@ body::before{
 <div class="main">
 
   <!-- â•â•â•â•â•â•â•â•â•â• SLEEP TAB â•â•â•â•â•â•â•â•â•â• -->
-  <!-- AFFIRMATIONS TAB -->
+  
+  <!-- GUIDE TAB -->
+  <div class="tab active" id="tab-guide">
+    <div class="guide-hero">
+      <div class="guide-hero-icon">🌙</div>
+      <div class="guide-hero-title">SleepWave</div>
+      <div class="guide-hero-sub">Your personal sleep companion — binaural beats, healing tones, affirmations, and a gentle personalized alarm.</div>
+    </div>
+
+    <div class="guide-steps">
+
+      <div class="guide-step optional">
+        <div class="guide-num">1</div>
+        <div class="guide-step-body">
+          <div class="guide-step-header">
+            <span class="guide-step-tab">Affirm</span>
+            <span class="guide-step-title">Set your affirmations <span style="font-size:.72rem;color:var(--text3)">(optional)</span></span>
+          </div>
+          <div class="guide-step-desc">Record or upload affirmations, a hypnosis session, or guided meditation. This plays first when you start sleep, then crossfades into your chosen background sound.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div class="guide-step-body">
+          <div class="guide-step-header">
+            <span class="guide-step-tab">Sleep</span>
+            <span class="guide-step-title">Choose your sleep sound</span>
+          </div>
+          <div class="guide-step-desc">Pick <strong style="color:var(--text)">Synth</strong> for binaural beats + ambient noise (delta, theta, alpha, or gamma), or <strong style="color:var(--text)">Custom File</strong> to use your own audio. Adjust volumes and carrier frequency, then tap <strong style="color:var(--text)">Start Sleep Audio</strong> when ready.</div>
+        </div>
+      </div>
+
+      <div class="guide-step optional">
+        <div class="guide-num">3</div>
+        <div class="guide-step-body">
+          <div class="guide-step-header">
+            <span class="guide-step-tab">Tones</span>
+            <span class="guide-step-title">Add a healing frequency <span style="font-size:.72rem;color:var(--text3)">(optional)</span></span>
+          </div>
+          <div class="guide-step-desc">Tap any frequency card to layer it on top of your sleep audio — 432 Hz, 528 Hz, 639 Hz and more. The tone fades out automatically when your alarm fires.</div>
+        </div>
+      </div>
+
+      <div class="guide-step optional">
+        <div class="guide-num">4</div>
+        <div class="guide-step-body">
+          <div class="guide-step-header">
+            <span class="guide-step-tab">Wake</span>
+            <span class="guide-step-title">Set your wake audio <span style="font-size:.72rem;color:var(--text3)">(optional)</span></span>
+          </div>
+          <div class="guide-step-desc">Record a personal wake message, upload an audio file, or choose a built-in alarm sound. This is what gradually replaces your sleep sound as the alarm fires.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div class="guide-step-body">
+          <div class="guide-step-header">
+            <span class="guide-step-tab">Alarm</span>
+            <span class="guide-step-title">Set your alarm time</span>
+          </div>
+          <div class="guide-step-desc">Enter a wake time and tap <strong style="color:var(--text)">Arm Alarm</strong>. Set the ramp duration to control how gradually the sleep sound fades out and wake audio fades in.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="guide-tip">
+      <strong>Tip:</strong> Install SleepWave to your home screen for the best experience — it keeps audio running overnight even with the screen off.
+    </div>
+
+    <button class="btn btn-primary" onclick="switchTab('sleep', document.querySelectorAll('.nav-btn')[2])">Start with Sleep Setup →</button>
+    <div style="height:16px"></div>
+  </div>
+
+<!-- AFFIRMATIONS TAB -->
   <div class="tab" id="tab-affirm">
 
     <div class="card">
@@ -375,7 +499,7 @@ body::before{
 
   </div>
 
-  <div class="tab active" id="tab-sleep">
+  <div class="tab" id="tab-sleep">
 
     <div class="card">
       <div class="card-title">Sleep Audio Source</div>
