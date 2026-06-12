@@ -263,7 +263,7 @@ body::before{
   width:100%;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;
   outline:none;
 }
-.freq-card.playing{box-shadow:0 0 18px var(--fcol)}
+.freq-card.playing{border-color:var(--fcol);box-shadow:0 0 18px var(--fcol)}
 .freq-sym{font-size:2.4rem;line-height:1;margin-bottom:10px;display:block}
 .freq-hz{font-family:'DM Serif Display',serif;font-size:1rem;margin-bottom:4px;display:block}
 .freq-lbl{font-size:.64rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block}
@@ -873,6 +873,7 @@ let sleepStartTime = null;
 let alarmFireTime = null;
 let pendingSessionStart = null;
 let pendingSessionStop = null;
+let pendingAlarmFireTime = null;
 let currentSleepMode = 'synth';
 let sleepFileBlob = null;
 let sleepFileAudio = null;
@@ -1467,16 +1468,18 @@ function playWakeAudio() {
 function saveManualSession() {
   document.getElementById('sleepLogPrompt').classList.remove('show');
   if (pendingSessionStart && pendingSessionStop) {
-    logHistory(pendingSessionStart, null, pendingSessionStop, pendingSessionStop - pendingSessionStart);
+    logHistory(pendingSessionStart, pendingAlarmFireTime, pendingSessionStop, pendingSessionStop - pendingSessionStart);
   }
   pendingSessionStart = null;
   pendingSessionStop = null;
+  pendingAlarmFireTime = null;
 }
 
 function discardManualSession() {
   document.getElementById('sleepLogPrompt').classList.remove('show');
   pendingSessionStart = null;
   pendingSessionStop = null;
+  pendingAlarmFireTime = null;
 }
 
 function dismissAlarm() {
@@ -1499,14 +1502,16 @@ function dismissAlarm() {
   stopAffirmAudio();
   sleepPhase = null;
 
-  // log to history
+  // show save prompt (same flow as manual stop)
   const now = new Date();
-  const start = sleepStartTime || now;
-  const fire = alarmFireTime || now;
-  const totalMs = now - start;
-  logHistory(start, fire, now, totalMs);
+  pendingSessionStart = sleepStartTime || now;
+  pendingSessionStop = now;
+  pendingAlarmFireTime = alarmFireTime || now;
   sleepStartTime = null;
   alarmFireTime = null;
+  document.getElementById('sleepLogDuration').textContent =
+    'Duration: ' + formatDuration(pendingSessionStop - pendingSessionStart);
+  document.getElementById('sleepLogPrompt').classList.add('show');
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
