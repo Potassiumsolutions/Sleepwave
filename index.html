@@ -465,7 +465,21 @@ body::before{
           <button class="btn btn-primary btn-sm" onclick="confirmAffirmRecording()">✓ Use This</button>
         </div>
       </div>
-      <div id="affirmRecConfirmed" style="display:none;font-size:.8rem;color:var(--success);margin-top:6px">✓ Recording saved as affirmation audio</div>
+      <div id="affirmRecConfirmed" style="display:none;margin-top:10px">
+        <div style="font-size:.8rem;color:var(--success);margin-bottom:10px">✓ Recording saved as affirmation audio</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text2);cursor:pointer;margin-bottom:6px">
+          <input type="checkbox" id="affirmRepeatChk" onchange="toggleAffirmRepeat(this)"
+            style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0">
+          Repeat recording
+        </label>
+        <div id="affirmRepeatCountRow" style="display:none;align-items:center;gap:8px;margin-left:23px">
+          <span style="font-size:.78rem;color:var(--text2)">Times:</span>
+          <input type="number" id="affirmRepeatNum" min="2" max="99" value="2"
+            onchange="setAffirmRepeatCount(this)"
+            style="width:56px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;
+                   color:var(--text);font-size:.85rem;padding:4px 8px;text-align:center;outline:none">
+        </div>
+      </div>
     </div>
 
     <div class="card" id="affirmFilePanel" style="display:none">
@@ -896,6 +910,8 @@ let affirmAudioEl = null;
 let affirmMediaRecorder = null;
 let affirmRecChunks = [];
 let affirmRecording = false;
+let affirmRepeat = false;
+let affirmRepeatCount = 2;
 let affirmRecTimer = null;
 let affirmRecSeconds = 0;
 let sleepPhase = null; // null | 'affirmation' | 'transitioning' | 'sleeping'
@@ -2416,6 +2432,18 @@ function reAffirmRecord() {
   document.getElementById('affirmRecConfirmed').style.display = 'none';
 }
 
+function toggleAffirmRepeat(chk) {
+  affirmRepeat = chk.checked;
+  document.getElementById('affirmRepeatCountRow').style.display = chk.checked ? 'flex' : 'none';
+}
+
+function setAffirmRepeatCount(inp) {
+  var v = parseInt(inp.value) || 2;
+  if (v < 2)  { v = 2;  inp.value = 2; }
+  if (v > 99) { v = 99; inp.value = 99; }
+  affirmRepeatCount = v;
+}
+
 function confirmAffirmRecording() {
   document.getElementById('affirmPlaybackArea').style.display = 'none';
   document.getElementById('affirmRecConfirmed').style.display = 'block';
@@ -2448,7 +2476,23 @@ function startAffirmPhase() {
   affirmAudioEl = new Audio(url);
   var src = affirmAudioCtx.createMediaElementSource(affirmAudioEl);
   src.connect(affirmMasterGain);
-  affirmAudioEl.addEventListener('ended', startAffirmTransition, {once:true});
+  var _repeatsLeft = affirmRepeat ? (affirmRepeatCount - 1) : 0;
+  function _onAffirmEnded() {
+    if (!sleeping) return;
+    if (_repeatsLeft > 0) {
+      _repeatsLeft--;
+      var _label = 'Affirming';
+      if (_repeatsLeft > 0) _label += ' ×' + (_repeatsLeft + 1);
+      _label += '…';
+      document.getElementById('statusBeat').textContent = _label;
+      affirmAudioEl.currentTime = 0;
+      affirmAudioEl.play().catch(function(){});
+    } else {
+      affirmAudioEl.removeEventListener('ended', _onAffirmEnded);
+      startAffirmTransition();
+    }
+  }
+  affirmAudioEl.addEventListener('ended', _onAffirmEnded);
   affirmAudioEl.play().catch(function(){});
 
   sleepPhase = 'affirmation';
