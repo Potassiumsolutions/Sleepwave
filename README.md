@@ -56,4 +56,4 @@ SleepWave is an entry in the **Build with Gemini xPrize — Health & Human Poten
 
 ---
 
-*Built by Paul — HH Molds Inc.*
+Created by **Paul A.T. Ramey** · [www.ksoldesigns.com](https://www.ksoldesigns.com) · Potassium Solutions
