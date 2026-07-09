@@ -115,6 +115,9 @@ body::before{
   background:var(--accent);border:2px solid var(--bg);cursor:pointer;
 }
 .slider-row .val{font-size:.78rem;color:var(--accent);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.slider-row .val.warn{color:var(--warn)}
+.slider-row .val.danger{color:var(--danger)}
+.vol-warn{font-size:.72rem;color:var(--warn);line-height:1.4;margin-top:2px}
 
 /* TOGGLE BUTTONS */
 .btn-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
@@ -562,6 +565,7 @@ body::before{
         <input type="range" id="binauralVol" min="0" max="100" value="60" step="1" oninput="updateBinauralVol(this)">
         <span class="val" id="binauralVolVal">60%</span>
       </div>
+      <div class="vol-warn" id="binauralVolWarn" style="display:none">⚠ High volume — keep it gentle to protect your hearing while you sleep.</div>
     </div>
 
     <div class="card">
@@ -609,6 +613,7 @@ body::before{
         <input type="range" id="masterVol" min="0" max="100" value="60" step="1" oninput="updateMasterVol(this)">
         <span class="val" id="masterVolVal">60%</span>
       </div>
+      <div class="vol-warn" id="masterVolWarn" style="display:none">⚠ High volume — keep it gentle to protect your hearing while you sleep.</div>
     </div>
 
     <div style="display:flex;gap:8px;padding:0 0 4px">
@@ -767,6 +772,7 @@ body::before{
         <input type="range" id="alarmVol" min="0" max="100" value="80" step="1" oninput="updateAlarmVol(this)">
         <span class="val" id="alarmVolVal">80%</span>
       </div>
+      <div class="vol-warn" id="alarmVolWarn" style="display:none">⚠ Very loud wake volume — make sure it won't startle you.</div>
     </div>
 
     <div class="card">
@@ -802,6 +808,7 @@ body::before{
         <input type="range" id="freqVol" min="0" max="100" value="70" step="1" oninput="updateFreqVol(this)">
         <span class="val" id="freqVolVal">70%</span>
       </div>
+      <div class="vol-warn" id="freqVolWarn" style="display:none">⚠ High volume — keep it gentle to protect your hearing.</div>
     </div>
 
     <div class="freq-grid" id="freqPresetList"></div>
@@ -1238,12 +1245,23 @@ function updateCarrier(el) {
 
 function updateBinauralVol(el) {
   document.getElementById('binauralVolVal').textContent = el.value + '%';
+  applyVolWarn('binauralVolVal', 'binauralVolWarn', parseInt(el.value, 10));
   if (binauralGain) binauralGain.gain.setTargetAtTime(el.value/100, audioCtx.currentTime, 0.05);
 }
 
+// Colors the % value and shows/hides its warning note at high output levels
+function applyVolWarn(valId, warnId, v) {
+  const valEl = document.getElementById(valId);
+  valEl.classList.toggle('warn', v >= 80 && v < 95);
+  valEl.classList.toggle('danger', v >= 95);
+  document.getElementById(warnId).style.display = v >= 80 ? 'block' : 'none';
+}
+
 function updateMasterVol(el) {
-  document.getElementById('masterVolVal').textContent = el.value + '%';
-  if (masterGain) masterGain.gain.setTargetAtTime(el.value/100, audioCtx.currentTime, 0.05);
+  const v = parseInt(el.value, 10);
+  document.getElementById('masterVolVal').textContent = v + '%';
+  applyVolWarn('masterVolVal', 'masterVolWarn', v);
+  if (masterGain) masterGain.gain.setTargetAtTime(v/100, audioCtx.currentTime, 0.05);
 }
 
 function updateAmbient() {
@@ -1264,6 +1282,7 @@ function updateRamp(el) {
 
 function updateAlarmVol(el) {
   document.getElementById('alarmVolVal').textContent = el.value + '%';
+  applyVolWarn('alarmVolVal', 'alarmVolWarn', parseInt(el.value, 10));
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1748,6 +1767,11 @@ function applySettings(s) {
   setSlider('rampSlider',    'rampVal',       s.rampMins,   ' min');
   setSlider('alarmVol',      'alarmVolVal',   s.alarmVol,   '%');
 
+  // Re-sync high-volume warnings for any sliders a preset changed
+  applyVolWarn('binauralVolVal', 'binauralVolWarn', parseInt(document.getElementById('binauralVol').value, 10));
+  applyVolWarn('masterVolVal',   'masterVolWarn',   parseInt(document.getElementById('masterVol').value, 10));
+  applyVolWarn('alarmVolVal',    'alarmVolWarn',    parseInt(document.getElementById('alarmVol').value, 10));
+
   // If audio is actively playing, push new values into the live Web Audio nodes immediately
   if (sleeping && audioCtx) {
     const now = audioCtx.currentTime;
@@ -1934,6 +1958,10 @@ if (!localStorage.getItem('sw_onboarded')) {
 }
 
 loadSettings();
+
+// Sync high-volume warnings against the initial slider values
+['binauralVol','masterVol','alarmVol','freqVol'].forEach(id =>
+  applyVolWarn(id + 'Val', id + 'Warn', parseInt(document.getElementById(id).value, 10)));
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // VISIBILITY / SCREEN LOCK RECOVERY
@@ -2353,6 +2381,7 @@ function stopFreq() {
 
 function updateFreqVol(el) {
   document.getElementById('freqVolVal').textContent = el.value + '%';
+  applyVolWarn('freqVolVal', 'freqVolWarn', parseInt(el.value, 10));
   if (freqMasterGain && freqAudioCtx) {
     var now = freqAudioCtx.currentTime;
     var v = parseFloat(el.value) / 100;
