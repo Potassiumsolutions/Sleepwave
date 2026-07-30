@@ -989,6 +989,79 @@ function stopIOSKeepAlive() {
   }
 }
 
+// ──────────────────────────────────────────────────────────────
+// OVERNIGHT AUDIO WATCHDOG
+// ──────────────────────────────────────────────────────────────
+// Android/Chrome can suspend the AudioContext for hours once the
+// screen is off (Doze). visibilitychange only fires on screen
+// UNLOCK, so without this the sound would stay dead until morning.
+// This interval runs the whole time we're playing and force-resumes
+// any suspended context + restarts the silent keepalive if the OS
+// paused it.
+let audioWatchdog = null;
+
+function resumeAllContexts() {
+  [audioCtx, affirmAudioCtx, freqAudioCtx].forEach(function(ctx) {
+    if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+      ctx.resume().catch(function(){});
+    }
+  });
+  // Restart the silent keepalive if the OS paused it
+  if (iosKeepAlive && iosKeepAlive.paused) {
+    iosKeepAlive.play().catch(function(){});
+  }
+}
+
+function startAudioWatchdog() {
+  if (audioWatchdog) return;
+  audioWatchdog = setInterval(resumeAllContexts, 10000);
+}
+
+function stopAudioWatchdog() {
+  if (audioWatchdog) {
+    clearInterval(audioWatchdog);
+    audioWatchdog = null;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// MEDIA SESSION
+// ──────────────────────────────────────────────────────────────
+// Registering active media playback is the strongest signal to
+// Android Chrome NOT to freeze/discard the tab in the background.
+// It also surfaces a media notification whose pause/stop buttons
+// cleanly end the sleep session instead of just muting the tab.
+function setMediaSessionPlaying(title) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    if (typeof MediaMetadata === 'function') {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title || 'Sleep Audio',
+        artist: 'SleepWave',
+        album: 'SleepWave'
+      });
+    }
+    navigator.mediaSession.playbackState = 'playing';
+    navigator.mediaSession.setActionHandler('pause', handleMediaStop);
+    navigator.mediaSession.setActionHandler('stop', handleMediaStop);
+  } catch (e) {}
+}
+
+function clearMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.setActionHandler('pause', null);
+    navigator.mediaSession.setActionHandler('stop', null);
+  } catch (e) {}
+}
+
+function handleMediaStop() {
+  try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
+  // Cleanly stop the running sleep session via the normal stop path
+  if (sleeping && typeof toggleSleep === 'function') toggleSleep();
+}
+
 // Unlock iOS audio on first user interaction anywhere on the page
 document.addEventListener('touchstart', unlockIOSAudio, {once: true});
 document.addEventListener('click', unlockIOSAudio, {once: true});
@@ -1174,6 +1247,8 @@ function toggleSleep() {
     document.getElementById('sleepBtn').textContent = '■ Stop Sleep Audio';
     requestWakeLock();
     startIOSKeepAlive();
+    startAudioWatchdog();
+    setMediaSessionPlaying('Sleep Audio');
   } else {
     const stopTime = new Date();
     sleepPhase = null;
@@ -1186,6 +1261,8 @@ function toggleSleep() {
     document.getElementById('statusAmbient').textContent = 'Stopped';
     releaseWakeLock();
     stopIOSKeepAlive();
+    stopAudioWatchdog();
+    clearMediaSession();
     if (sleepStartTime) {
       pendingSessionStart = sleepStartTime;
       pendingSessionStop = stopTime;
@@ -2615,6 +2692,8 @@ function startAffirmPhase() {
   document.getElementById('statusAmbient').textContent = 'Waiting';
   requestWakeLock();
   startIOSKeepAlive();
+  startAudioWatchdog();
+  setMediaSessionPlaying('Sleep Audio');
 }
 
 function startAffirmTransition() {
