@@ -944,6 +944,59 @@ let masterGain = null;
 
 const BEAT_FREQS = {delta:2, theta:6, alpha:10, gamma:40};
 
+// ──────────────────────────────────────────────────────────────
+// MEDIA-ELEMENT OUTPUT ROUTING  (overnight survival for EVERY sound option)
+// ──────────────────────────────────────────────────────────────
+// On Android, a bare AudioContext is suspended by Doze once the screen is
+// off, so pure Web Audio sound (binaural, ambient, tones) dies overnight.
+// Routing each context's output through a real <audio> element playing a
+// MediaStream hands playback to the OS media pipeline, which holds audio
+// focus and keeps the whole app alive. Every generated-sound path uses this.
+// Keyed by slot ('sleep' for synth/custom-file, 'freq' for the Tones tab) so
+// a tone can play on top of sleep audio without the two clobbering each other.
+const streamRoutes = {};
+
+function routeThroughMediaElement(ctx, node, slot) {
+  try {
+    if (typeof ctx.createMediaStreamDestination === 'function') {
+      const dest = ctx.createMediaStreamDestination();
+      node.connect(dest);
+      const el = new Audio();
+      el.srcObject = dest.stream;
+      el.autoplay = true;
+      // Self-heal: if the OS pauses the element (Doze), the 'pause' media
+      // event still fires when background timers are throttled — restart now.
+      el.addEventListener('pause', function() {
+        if (streamRoutes[slot] && streamRoutes[slot].el === el) el.play().catch(function(){});
+      });
+      const p = el.play();
+      if (p && p.catch) p.catch(function() {
+        // Media-element route failed to start — fall back to direct output.
+        try { node.connect(ctx.destination); } catch (e) {}
+      });
+      streamRoutes[slot] = { el: el, dest: dest };
+      return; // do NOT also connect to ctx.destination (would double the sound)
+    }
+  } catch (e) { /* fall through to direct output */ }
+  node.connect(ctx.destination);
+}
+
+function teardownRoute(slot) {
+  const r = streamRoutes[slot];
+  if (r && r.el) {
+    try { r.el.pause(); } catch (e) {}
+    r.el.srcObject = null;
+  }
+  delete streamRoutes[slot];
+}
+
+function resumeStreamRoutes() {
+  Object.keys(streamRoutes).forEach(function(k) {
+    const el = streamRoutes[k] && streamRoutes[k].el;
+    if (el && el.paused) el.play().catch(function(){});
+  });
+}
+
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // iOS AUDIO UNLOCK + KEEP-ALIVE
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1019,6 +1072,8 @@ function resumeAllContexts() {
   if (iosKeepAlive && iosKeepAlive.paused) {
     iosKeepAlive.play().catch(function(){});
   }
+  // Restart any media-element output route the OS paused (Doze)
+  resumeStreamRoutes();
 }
 
 function startAudioWatchdog() {
@@ -1080,7 +1135,7 @@ function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   masterGain = audioCtx.createGain();
   masterGain.gain.value = parseFloat(document.getElementById('masterVol').value) / 100;
-  masterGain.connect(audioCtx.destination);
+  routeThroughMediaElement(audioCtx, masterGain, 'sleep');
 
   // Binaural
   binauralGain = audioCtx.createGain();
@@ -1207,7 +1262,7 @@ function initFileAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   masterGain = audioCtx.createGain();
   masterGain.gain.value = parseFloat(document.getElementById('masterVol').value) / 100;
-  masterGain.connect(audioCtx.destination);
+  routeThroughMediaElement(audioCtx, masterGain, 'sleep');
   const url = URL.createObjectURL(sleepFileBlob);
   sleepFileAudio = new Audio(url);
   sleepFileAudio.loop = true;
@@ -1295,6 +1350,7 @@ function stopAllAudio() {
     // Fade out smoothly then close the context so it can be fully rebuilt on next start
     masterGain && masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
     setTimeout(() => {
+      teardownRoute('sleep');
       if (audioCtx) {
         audioCtx.close().then(() => {
           audioCtx = null;
@@ -2184,8 +2240,13 @@ function startFreq(preset) {
   const vol = parseFloat(document.getElementById('freqVol').value) / 100;
   freqMasterGain.gain.setValueAtTime(0.001, freqAudioCtx.currentTime);
   freqMasterGain.gain.exponentialRampToValueAtTime(vol, freqAudioCtx.currentTime + 3);
-  freqMasterGain.connect(freqAudioCtx.destination);
+  routeThroughMediaElement(freqAudioCtx, freqMasterGain, 'freq');
   freqOscNodes = [];
+  // Keep the app alive if the user falls asleep to a tone (same overnight
+  // protection the Sleep tab gets). Idempotent — safe if sleep is also running.
+  startIOSKeepAlive();
+  startAudioWatchdog();
+  setMediaSessionPlaying('Healing Tone');
 
   if (preset.variant === 'golden') {
     // 999 Hz chorus routes through a pulsed bus so 9 Hz AM actually affects it
@@ -2451,7 +2512,16 @@ function stopFreq() {
   freqAudioCtx = null; freqMasterGain = null; freqOscNodes = []; freqNoiseSrc = null; freqPlayingId = null;
   refreshNavDots();
   renderFreqPresets();
-  setTimeout(function() { ctx.close(); }, 1200);
+  setTimeout(function() {
+    teardownRoute('freq');
+    ctx.close();
+    // Release overnight keepalive only if sleep audio isn't also running
+    if (!sleeping) {
+      stopIOSKeepAlive();
+      stopAudioWatchdog();
+      clearMediaSession();
+    }
+  }, 1200);
   // 10-minute fence: prompt to log if tone ran long enough and sleep isn't covering it
   var tStart = freqStartTime;
   freqStartTime = null;
