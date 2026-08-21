@@ -952,6 +952,7 @@ const BEAT_FREQS = {delta:2, theta:6, alpha:10, gamma:40};
 // so the alarm can play later even when fired from a timer.
 let iosAudioUnlocked = false;
 let iosKeepAlive = null; // silent looping audio to keep OS audio pipeline alive
+let keepAliveWanted = false; // true while a sleep session wants the keepalive running
 let micStream = null;   // active microphone stream — stopped after recording
 
 function unlockIOSAudio() {
@@ -970,6 +971,7 @@ function unlockIOSAudio() {
 function startIOSKeepAlive() {
   // iOS Safari doesn't support WakeLock — use a silent looping audio element
   // as a keepalive so the page isn't suspended during sleep
+  keepAliveWanted = true;
   if (iosKeepAlive) return;
   {
     // Always run — keeps Android and iOS audio pipeline alive during sleep
@@ -978,11 +980,18 @@ function startIOSKeepAlive() {
     iosKeepAlive = new Audio(silentSrc);
     iosKeepAlive.loop = true;
     iosKeepAlive.volume = 0.001;
+    // Self-heal: Android's Doze/battery manager can silently PAUSE the element.
+    // The 'pause' media event still fires when background setInterval timers are
+    // throttled/frozen, so this is our fastest recovery path — restart instantly.
+    iosKeepAlive.addEventListener('pause', function() {
+      if (keepAliveWanted && iosKeepAlive) iosKeepAlive.play().catch(function(){});
+    });
     iosKeepAlive.play().catch(() => {});
   }
 }
 
 function stopIOSKeepAlive() {
+  keepAliveWanted = false;
   if (iosKeepAlive) {
     iosKeepAlive.pause();
     iosKeepAlive = null;
